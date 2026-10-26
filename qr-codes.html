@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>رموز QR للطاولات - Roblo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  [hidden] { display:none !important; }
+  body { font-family:'Segoe UI',Tahoma,sans-serif; margin:0; padding:16px; background:#F7F5EE; color:#1B2623; }
+  .top { max-width:900px; margin:0 auto 16px; background:#fff; border:1px solid #E3DECF; border-radius:14px; padding:14px; }
+  .top h1 { margin:0 0 8px; font-size:1.2em; color:#8C6A14; }
+  .top label { font-size:.85em; color:#66706C; display:block; margin-bottom:6px; }
+  .top input { width:100%; padding:10px; border-radius:10px; border:1px solid #E3DECF; font-size:.95em; direction:ltr; }
+  .top button { margin-top:10px; padding:10px 16px; border:0; border-radius:10px; background:#0E5A57; color:#fff; font-weight:700; cursor:pointer; }
+  .zone { max-width:900px; margin:18px auto 0; }
+  .zone h2 { font-size:1.1em; color:#8C6A14; margin:0 0 8px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .card { background:#fff; border:1px solid #E3DECF; border-radius:12px; padding:10px; text-align:center; break-inside:avoid; }
+  .card img, .card canvas { width:100%; height:auto; max-width:140px; }
+  .card .lbl { font-weight:700; margin-top:6px; font-size:.95em; }
+  .card .url { font-size:10px; color:#66706C; direction:ltr; word-break:break-all; margin-top:2px; }
+  @media print {
+    .top, .noprint { display:none !important; }
+    body { background:#fff; padding:0; }
+    .zone { page-break-before:always; margin-top:0; }
+    .zone:first-of-type { page-break-before:auto; }
+    .grid { grid-template-columns:repeat(3,1fr); }
+    .card { border:1px dashed #999; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top noprint">
+  <h1>توليد رموز QR لكل طاولة</h1>
+  <label for="base">رابط صفحة القائمة (index.html) بعد النشر</label>
+  <input id="base" type="text">
+  <button type="button" id="gen">توليد الرموز</button>
+  <button type="button" onclick="window.print()">طباعة</button>
+</div>
+
+<div id="out"></div>
+
+<script>
+  // نفس الزونات في index.html و waiter.html
+  const ZONES = [
+    { id: "gauche",   label: "صالة يسار",    count: 13 },
+    { id: "centre",   label: "صالة وسط",     count: 13 },
+    { id: "droite",   label: "صالة يمين",    count: 13 },
+    { id: "terrasse", label: "التراس",        count: 4  },
+    { id: "etage",    label: "الطابق العلوي", count: 18 }
+  ];
+
+  const baseInput = document.getElementById("base");
+  baseInput.value = localStorage.getItem("roblo-menu-url") || "https://YOUR-SITE.netlify.app/index.html";
+
+  function build() {
+    const base = baseInput.value.trim();
+    try { localStorage.setItem("roblo-menu-url", base); } catch (e) {}
+    let h = "";
+    ZONES.forEach(z => {
+      h += `<section class="zone"><h2>${z.label} (${z.count})</h2><div class="grid">`;
+      for (let n = 1; n <= z.count; n++) {
+        const url = `${base}?table=${z.id}-${n}`;
+        const qr = qrcode(0, "M");
+        qr.addData(url);
+        qr.make();
+        h += `<div class="card">${qr.createImgTag(5, 8)}<div class="lbl">${z.label} · ${n}</div><div class="url">${url}</div></div>`;
+      }
+      h += `</div></section>`;
+    });
+    document.getElementById("out").innerHTML = h;
+  }
+
+  document.getElementById("gen").addEventListener("click", build);
+  build();
+</script>
+</body>
+</html>

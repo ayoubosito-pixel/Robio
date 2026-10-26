@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>شاشة النادل - Roblo</title>
+<style>
+  :root { --bg:#F7F5EE; --surface:#FFFFFF; --ink:#1B2623; --muted:#66706C; --line:#E3DECF; --action:#0E5A57; --gold:#8C6A14; --gold-soft:#C9A24A; --red:#B8362B; --green:#2E7D32; --busy:#E9C46A; }
+  [hidden] { display:none !important; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',Tahoma,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; padding:14px 14px 40px; }
+  button, input { font:inherit; color:inherit; }
+  button { cursor:pointer; }
+
+  header.top { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+  header.top h1 { font-size:1.35em; color:var(--gold); }
+  #who { font-size:.9em; color:var(--muted); margin-top:2px; }
+  #who b { color:var(--ink); }
+  .tools { display:flex; gap:8px; flex-wrap:wrap; }
+  .tools button { border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:8px 14px; font-size:.9em; font-weight:600; }
+  .tools button.on { background:var(--ink); color:var(--bg); }
+  #status { font-size:.8em; color:var(--muted); }
+
+  .warn { background:#FFF4D6; border:1px solid #E8C768; padding:10px 14px; border-radius:12px; font-size:.9em; margin-bottom:12px; }
+
+  /* تسجيل الدخول */
+  .login { max-width:380px; margin:60px auto 0; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:24px; text-align:center; }
+  .login h2 { font-size:1.3em; margin-bottom:6px; color:var(--gold); }
+  .login p { color:var(--muted); font-size:.9em; margin-bottom:16px; }
+  .login input { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--line); font-size:1em; background:var(--bg); }
+  .login button { width:100%; margin-top:12px; padding:13px; border:0; border-radius:12px; background:var(--action); color:#fff; font-weight:700; font-size:1em; }
+
+  /* الزونات والطاولات */
+  .zones { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+  .zones::-webkit-scrollbar { display:none; }
+  .ztab { flex:none; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:8px 14px; font-weight:600; font-size:.9em; white-space:nowrap; }
+  .ztab.on { background:var(--gold); border-color:var(--gold); color:#fff; }
+  .floor { display:grid; grid-template-columns:repeat(auto-fill,minmax(68px,1fr)); gap:8px; margin-top:12px; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:12px; }
+  .tbl { aspect-ratio:1; border-radius:12px; border:2px solid var(--line); background:#EFEBDD; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:1.1em; font-weight:700; padding:2px; }
+  .tbl small { font-size:.6em; font-weight:600; color:#4a3a10; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tbl.busy { background:var(--busy); border-color:#D4A93C; }
+  .tbl.new { background:var(--red); border-color:var(--red); color:#fff; animation:blink 1.2s ease-in-out infinite; }
+  .tbl.new small { color:#fff; }
+  .tbl.sel { outline:3px solid var(--action); outline-offset:2px; }
+  @keyframes blink { 50% { opacity:.6; } }
+  .legend { display:flex; gap:12px; flex-wrap:wrap; font-size:.8em; color:var(--muted); margin-top:10px; }
+  .legend span::before { content:"● "; }
+  .lg-new::before { color:var(--red); } .lg-busy::before { color:var(--busy); } .lg-free::before { color:#CFC8B5; }
+
+  .filter { display:flex; justify-content:space-between; align-items:center; margin:18px 2px 8px; font-weight:700; }
+  .filter button { border:0; background:none; color:var(--action); text-decoration:underline; font-size:.9em; }
+
+  /* الطلبات */
+  .orders { display:grid; grid-template-columns:1fr; gap:12px; }
+  @media (min-width:760px) { .orders { grid-template-columns:1fr 1fr 1fr; } }
+  .order { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:14px; }
+  .order.new { border-color:var(--red); box-shadow:0 0 0 2px rgba(184,54,43,.35); }
+  .ohead { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .tno { font-weight:800; font-size:1.15em; color:var(--gold); }
+  .tm { font-size:.8em; color:var(--muted); }
+  .tag { font-size:.74em; padding:3px 9px; border-radius:999px; font-weight:700; white-space:nowrap; }
+  .tag.new { background:var(--red); color:#fff; }
+  .tag.acc { background:var(--busy); color:#3d2c00; }
+  .line { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed var(--line); }
+  .line:last-child { border-bottom:0; }
+  .inote { margin-top:4px; background:#FFF4D6; color:#6B4E00; border-right:3px solid var(--gold-soft); padding:5px 8px; border-radius:6px; font-size:.86em; }
+  .gnote { margin-top:10px; background:#E8F1EF; color:#0B3F3D; padding:8px 10px; border-radius:10px; font-size:.9em; }
+  .gnote b { color:var(--action); }
+  .otot { display:flex; justify-content:space-between; margin-top:10px; font-weight:800; }
+  .by { margin-top:8px; font-size:.85em; color:var(--muted); }
+  .by b { color:var(--ink); }
+  .acts { display:flex; gap:8px; margin-top:12px; }
+  .acts button { flex:1; border:0; border-radius:10px; padding:11px; font-weight:700; color:#fff; }
+  .b-acc { background:var(--action); }
+  .b-srv { background:var(--green); }
+  .b-can { background:#6b5b4e; flex:0 0 auto !important; }
+  .empty { text-align:center; color:var(--muted); padding:40px 0; font-size:1.05em; }
+
+  /* السجل */
+  #hist { margin-top:20px; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; }
+  #hist h2 { font-size:1.1em; color:var(--gold); margin-bottom:10px; }
+  table { width:100%; border-collapse:collapse; font-size:.92em; }
+  th, td { text-align:right; padding:8px 6px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; font-size:.85em; }
+  td.num { font-variant-numeric:tabular-nums; }
+  .hsub { margin-top:14px; font-size:.85em; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>🛎️ طلبات Roblo</h1>
+    <div id="who"></div>
+  </div>
+  <div class="tools">
+    <span id="status"></span>
+    <button id="histBtn" type="button">📊 سجل اليوم</button>
+    <button id="logoutBtn" type="button">تغيير الاسم</button>
+  </div>
+</header>
+
+<div class="warn" id="dbWarn" hidden>لم يتم ربط قاعدة البيانات بعد. راجعوا ORDERS_DB_URL في هذا الملف.</div>
+
+<!-- تسجيل اسم النادل -->
+<section class="login" id="login" hidden>
+  <h2>مرحباً بكم</h2>
+  <p>اكتبوا اسمكم ليظهر على الطلبات التي تقبلونها</p>
+  <input id="wname" type="text" placeholder="اسم النادل" maxlength="30" autocomplete="off">
+  <button type="button" id="wlogin">دخول</button>
+</section>
+
+<main id="app" hidden>
+  <div class="zones" id="zones"></div>
+  <div class="floor" id="floor"></div>
+  <div class="legend">
+    <span class="lg-new">طلب جديد</span>
+    <span class="lg-busy">مقبول من نادل</span>
+    <span class="lg-free">فارغة</span>
+  </div>
+
+  <div class="filter">
+    <span id="filterLabel">كل الطلبات الجارية</span>
+    <button type="button" id="clearFilter" hidden>عرض الكل</button>
+  </div>
+  <div class="orders" id="orders"></div>
+  <p class="empty" id="empty" hidden>لا توجد طلبات جارية</p>
+
+  <section id="hist" hidden>
+    <h2>📊 سجل اليوم حسب النادل</h2>
+    <table>
+      <thead><tr><th>النادل</th><th>طلبات</th><th>المجموع (DH)</th></tr></thead>
+      <tbody id="histBody"></tbody>
+    </table>
+    <p class="hsub" id="histNote"></p>
+  </section>
+</main>
+
+<script>
+  /* ================= الإعدادات ================= */
+  const ORDERS_DB_URL = "https://YOUR-PROJECT-default-rtdb.firebaseio.com"; // نفس الرابط في index.html
+  const DB_READY = !ORDERS_DB_URL.includes("YOUR-PROJECT");
+  const REFRESH_MS = 3000;
+  const WAITER_KEY = "roblo-waiter-name";
+
+  // نفس الزونات في index.html
+  const ZONES = [
+    { id: "gauche",   label: "صالة يسار",    count: 13 },
+    { id: "centre",   label: "صالة وسط",     count: 13 },
+    { id: "droite",   label: "صالة يمين",    count: 13 },
+    { id: "terrasse", label: "التراس",        count: 4  },
+    { id: "etage",    label: "الطابق العلوي", count: 18 }
+  ];
+
+  /* ================= أدوات ================= */
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit" }) : "";
+  const sameDay = iso => iso && new Date(iso).toDateString() === new Date().toDateString();
+
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880; g.gain.value = 0.2;
+      o.start(); o.stop(ctx.currentTime + 0.4);
+    } catch (e) {}
+  }
+
+  /* ================= الحالة ================= */
+  let waiter = null;
+  try { waiter = localStorage.getItem(WAITER_KEY); } catch (e) {}
+  let zone = ZONES[0].id;
+  let selectedTable = null;
+  let orders = {};          // id -> order
+  let knownNew = new Set();
+  let firstLoad = true;
+  let histOpen = false;
+
+  if (!DB_READY) $("#dbWarn").hidden = false;
+
+  /* ================= الدخول ================= */
+  function showLogin() {
+    $("#login").hidden = false;
+    $("#app").hidden = true;
+    $("#who").innerHTML = "";
+    $("#wname").focus();
+  }
+  function showApp() {
+    $("#login").hidden = true;
+    $("#app").hidden = false;
+    $("#who").innerHTML = `النادل: <b>${esc(waiter)}</b>`;
+    loadOrders();
+  }
+  $("#wlogin").addEventListener("click", () => {
+    const name = $("#wname").value.trim();
+    if (name.length < 2) { alert("اكتبوا اسماً من حرفين على الأقل"); return; }
+    waiter = name;
+    try { localStorage.setItem(WAITER_KEY, name); } catch (e) {}
+    showApp();
+  });
+  $("#wname").addEventListener("keydown", e => { if (e.key === "Enter") $("#wlogin").click(); });
+  $("#logoutBtn").addEventListener("click", () => {
+    if (!confirm("تغيير الاسم؟")) return;
+    waiter = null;
+    try { localStorage.removeItem(WAITER_KEY); } catch (e) {}
+    showLogin();
+  });
+
+  /* ================= قراءة وكتابة الطلبات ================= */
+  async function loadOrders() {
+    if (!DB_READY) { $("#status").textContent = "غير مربوط"; return; }
+    try {
+      const res = await fetch(`${ORDERS_DB_URL}/orders.json`);
+      const data = (await res.json()) || {};
+      orders = data;
+
+      const newIds = Object.entries(data).filter(([, o]) => o.status === "new").map(([id]) => id);
+      if (!firstLoad && newIds.some(id => !knownNew.has(id))) beep();
+      knownNew = new Set(newIds);
+      firstLoad = false;
+
+      $("#status").textContent = "محدّث " + new Date().toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      renderAll();
+    } catch (e) {
+      $("#status").textContent = "تعذر الاتصال";
+    }
+  }
+
+  async function patch(id, data) {
+    const res = await fetch(`${ORDERS_DB_URL}/orders/${id}.json`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+  }
+
+  async function act(action, id) {
+    try {
+      if (action === "accept") {
+        // نتأكد أن الطلب لم يقبله نادل آخر قبل الكتابة
+        const r = await fetch(`${ORDERS_DB_URL}/orders/${id}.json`);
+        const cur = await r.json();
+        if (!cur || cur.status !== "new") {
+          alert(cur && cur.acceptedBy ? `هذا الطلب قبله ${cur.acceptedBy}` : "تغيّر حالة الطلب");
+          loadOrders(); return;
+        }
+        await patch(id, { status: "accepted", acceptedBy: waiter, acceptedAt: new Date().toISOString() });
+      }
+      if (action === "serve") {
+        await patch(id, { status: "served", servedAt: new Date().toISOString() });
+      }
+      if (action === "cancel") {
+        if (!confirm("إلغاء هذا الطلب؟")) return;
+        await patch(id, { status: "cancelled" });
+      }
+      loadOrders();
+    } catch (e) {
+      alert("تعذر تنفيذ العملية، أعيدوا المحاولة");
+    }
+  }
+
+  /* ================= الواجهة ================= */
+  function activeOrders() {
+    return Object.entries(orders)
+      .filter(([, o]) => o.status === "new" || o.status === "accepted")
+      .sort((a, b) => new Date(a[1].time) - new Date(b[1].time));
+  }
+
+  function tableStatus() {
+    const map = {};
+    activeOrders().forEach(([, o]) => {
+      if (!o.tableId) return;
+      const m = map[o.tableId] || (map[o.tableId] = { hasNew: false, acceptedBy: null });
+      if (o.status === "new") m.hasNew = true;
+      if (o.status === "accepted" && !m.acceptedBy) m.acceptedBy = o.acceptedBy;
+    });
+    return map;
+  }
+
+  function renderZones() {
+    $("#zones").innerHTML = ZONES.map(z =>
+      `<button type="button" class="ztab ${z.id === zone ? "on" : ""}" data-z="${z.id}">${esc(z.label)}</button>`
+    ).join("");
+  }
+
+  function renderFloor() {
+    const z = ZONES.find(x => x.id === zone);
+    const st = tableStatus();
+    let h = "";
+    for (let n = 1; n <= z.count; n++) {
+      const tid = `${z.id}-${n}`;
+      const s = st[tid];
+      let cls = "";
+      let small = "";
+      if (s && s.hasNew) cls = "new";
+      else if (s) { cls = "busy"; small = s.acceptedBy ? `<small>${esc(s.acceptedBy)}</small>` : ""; }
+      if (selectedTable === tid) cls += " sel";
+      h += `<button type="button" class="tbl ${cls}" data-t="${tid}"><span>${n}</span>${small}</button>`;
+    }
+    $("#floor").innerHTML = h;
+  }
+
+  function renderOrders() {
+    const list = activeOrders().filter(([, o]) => !selectedTable || o.tableId === selectedTable);
+    $("#empty").hidden = list.length > 0;
+    $("#filterLabel").textContent = selectedTable
+      ? "طاولة: " + (list[0] ? list[0][1].table : selectedTable)
+      : "كل الطلبات الجارية (" + list.length + ")";
+    $("#clearFilter").hidden = !selectedTable;
+
+    $("#orders").innerHTML = list.map(([id, o]) => {
+      const isNew = o.status === "new";
+      const lines = (o.items || []).map(it => `
+        <div>
+          <div class="line"><span>${it.qty} × ${esc(it.name)}</span><span>${it.subtotal} DH</span></div>
+          ${it.note ? `<div class="inote">📝 ${esc(it.note)}</div>` : ""}
+        </div>`).join("");
+      const general = o.generalNote ? `<div class="gnote"><b>ملاحظة الزبون:</b> ${esc(o.generalNote)}</div>` : "";
+      const by = !isNew && o.acceptedBy ? `<div class="by">قبله: <b>${esc(o.acceptedBy)}</b> · ${fmtTime(o.acceptedAt)}</div>` : "";
+      const actions = isNew
+        ? `<button class="b-acc" data-act="accept" data-id="${id}">✅ قبول الطلب</button>
+           <button class="b-can" data-act="cancel" data-id="${id}">إلغاء</button>`
+        : `<button class="b-srv" data-act="serve" data-id="${id}">🍽️ تم التقديم</button>
+           <button class="b-can" data-act="cancel" data-id="${id}">إلغاء</button>`;
+      return `<article class="order ${isNew ? "new" : ""}">
+        <div class="ohead">
+          <span class="tno">${esc(o.table)}</span>
+          <span class="tag ${isNew ? "new" : "acc"}">${isNew ? "جديد" : "مقبول"}</span>
+        </div>
+        <div class="tm">${fmtTime(o.time)}</div>
+        <div style="margin-top:8px">${lines}</div>
+        ${general}
+        <div class="otot"><span>المجموع</span><span>${o.total} DH</span></div>
+        ${by}
+        <div class="acts">${actions}</div>
+      </article>`;
+    }).join("");
+  }
+
+  function renderHistory() {
+    if (!histOpen) return;
+    const served = Object.values(orders).filter(o => o.status === "served" && sameDay(o.servedAt));
+    const byWaiter = {};
+    served.forEach(o => {
+      const w = o.acceptedBy || "غير معروف";
+      if (!byWaiter[w]) byWaiter[w] = { count: 0, total: 0 };
+      byWaiter[w].count++;
+      byWaiter[w].total += +o.total || 0;
+    });
+    const rows = Object.entries(byWaiter).sort((a, b) => b[1].total - a[1].total);
+    $("#histBody").innerHTML = rows.length
+      ? rows.map(([w, v]) => `<tr><td>${esc(w)}</td><td class="num">${v.count}</td><td class="num">${v.total}</td></tr>`).join("")
+      : `<tr><td colspan="3" style="text-align:center;color:var(--muted)">لا توجد طلبات مقدّمة اليوم</td></tr>`;
+    const total = served.reduce((s, o) => s + (+o.total || 0), 0);
+    $("#histNote").textContent = `إجمالي اليوم: ${served.length} طلب · ${total} DH`;
+  }
+
+  function renderAll() {
+    renderZones();
+    renderFloor();
+    renderOrders();
+    renderHistory();
+  }
+
+  // أحداث النقر (تفويض)
+  document.addEventListener("click", e => {
+    const z = e.target.closest("[data-z]");
+    if (z) { zone = z.dataset.z; selectedTable = null; renderAll(); return; }
+    const t = e.target.closest("[data-t]");
+    if (t) { selectedTable = selectedTable === t.dataset.t ? null : t.dataset.t; renderAll(); return; }
+    const a = e.target.closest("[data-act]");
+    if (a) { act(a.dataset.act, a.dataset.id); }
+  });
+  $("#clearFilter").addEventListener("click", () => { selectedTable = null; renderAll(); });
+  $("#histBtn").addEventListener("click", () => {
+    histOpen = !histOpen;
+    $("#hist").hidden = !histOpen;
+    $("#histBtn").classList.toggle("on", histOpen);
+    renderHistory();
+  });
+
+  /* ================= البدء ================= */
+  if (waiter) showApp(); else showLogin();
+  setInterval(() => { if (waiter) loadOrders(); }, REFRESH_MS);
+</script>
+</body>
+</html>
