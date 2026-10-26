@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roblo - القائمة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#F7F5EE; --surface:#FFFFFF; --ink:#1B2623; --muted:#66706C; --line:#E3DECF; --chip:#EFEBDD;
+    --gold:#8C6A14; --gold-soft:#C9A24A; --action:#0E5A57; --on-action:#FFFFFF; --red:#B8362B;
+    --font-display:'Fraunces',Georgia,serif; --font-body:'Hanken Grotesk',system-ui,sans-serif; --font-ar:'Cairo',Tahoma,sans-serif;
+  }
+  [hidden] { display:none !important; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 var(--font-body); padding:0 16px 120px; overflow-x:hidden; }
+  button, input, textarea { font:inherit; color:inherit; }
+  button { cursor:pointer; }
+  .wrap { max-width:720px; margin:0 auto; }
+
+  /* ---------- العرض القصير ---------- */
+  #intro { position:fixed; inset:0; z-index:100; background:radial-gradient(circle at 50% 35%, #1f7a76 0%, #0E5A57 45%, #082f2d 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; transition:opacity .7s ease, visibility .7s; padding:24px; }
+  #intro.hide { opacity:0; visibility:hidden; }
+  #intro .big { font:700 clamp(56px,18vw,110px)/1 var(--font-display); letter-spacing:-.02em; animation:rise 1.2s ease-out both; }
+  #intro .k { margin-top:14px; letter-spacing:.3em; font-size:12px; color:#E6C98A; animation:rise 1.2s .3s ease-out both; }
+  #intro .ar { margin-top:18px; font:700 22px/1.4 var(--font-ar); animation:rise 1.2s .6s ease-out both; }
+  #intro .fr { margin-top:6px; opacity:.8; font-size:14px; animation:rise 1.2s .8s ease-out both; }
+  #intro .skip { position:absolute; top:18px; left:18px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:999px; padding:7px 14px; font-size:13px; }
+  @keyframes rise { from { opacity:0; transform:translateY(18px) scale(1.03); } to { opacity:1; transform:none; } }
+
+  /* ---------- الرأس ---------- */
+  .hero { text-align:center; padding:36px 0 18px; }
+  .eyebrow { font:700 11px/1 var(--font-body); letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin:0 0 10px; }
+  .brand { font:700 clamp(52px,15vw,78px)/.95 var(--font-display); letter-spacing:-.02em; margin:0; }
+  .sub { color:var(--muted); margin:12px auto 0; max-width:46ch; font-size:14px; }
+  .table-badge { display:inline-block; margin-top:16px; padding:8px 18px; border:1px solid var(--gold-soft); border-radius:999px; font-weight:700; color:var(--gold); background:var(--surface); }
+  .table-badge.warn { color:var(--red); border-color:var(--red); }
+  .dbwarn { margin:14px auto 0; max-width:520px; background:#FFF4D6; border:1px solid #E8C768; color:#6B4E00; padding:10px 14px; border-radius:12px; font-size:13px; }
+
+  .search { position:relative; margin:18px 0 4px; }
+  .search input { width:100%; height:46px; padding:0 14px 0 42px; border-radius:12px; border:1px solid var(--line); background:var(--surface); }
+  .search svg { position:absolute; left:13px; top:13px; width:20px; height:20px; stroke:var(--muted); fill:none; stroke-width:2; }
+
+  /* ---------- الأقسام ---------- */
+  nav.nav { position:sticky; top:0; z-index:20; display:flex; gap:8px; overflow-x:auto; padding:10px 0; background:var(--bg); scrollbar-width:none; }
+  nav.nav::-webkit-scrollbar { display:none; }
+  .chip { flex:none; padding:8px 14px; border-radius:999px; border:1px solid var(--line); background:var(--chip); font-weight:600; font-size:13px; white-space:nowrap; }
+  .chip.on { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .cat { padding-top:26px; scroll-margin-top:60px; }
+  .cat-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .cat h2 { font:700 28px/1.1 var(--font-display); margin:0; }
+  .ar-title { font:700 17px/1 var(--font-ar); color:var(--gold); }
+  .tag { display:inline-block; margin-top:6px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); }
+  .rule { height:1px; border:0; background:linear-gradient(to right,var(--gold-soft),transparent); margin:12px 0 0; }
+  .note, .legend { margin:8px 0 0; color:var(--muted); font-size:13px; }
+  .items { list-style:none; margin:4px 0 0; padding:0; }
+  .item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); }
+  .item[hidden] { display:none; }
+  .txt { min-width:0; flex:1; }
+  .nm { font-weight:600; overflow-wrap:anywhere; }
+  .ds { display:block; color:var(--muted); font-size:13px; margin-top:2px; line-height:1.4; }
+  .pr { display:flex; gap:6px; flex:none; flex-wrap:wrap; justify-content:flex-end; }
+  .pbtn { position:relative; display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:0 12px; border-radius:999px; border:1px solid var(--gold-soft); background:transparent; font-weight:600; font-size:14px; font-variant-numeric:tabular-nums; }
+  .pbtn .sz { font-size:11px; font-weight:700; color:var(--gold); }
+  .pbtn i { font-style:normal; font-size:11px; color:var(--muted); }
+  .pbtn.has { background:var(--action); border-color:var(--action); color:var(--on-action); }
+  .pbtn.has .sz, .pbtn.has i { color:inherit; }
+  .pbtn .q { position:absolute; top:-7px; right:-5px; min-width:19px; height:19px; padding:0 5px; border-radius:999px; background:var(--ink); color:var(--bg); font:700 11px/19px var(--font-body); text-align:center; }
+  .pbtn .q:empty { display:none; }
+  .empty { padding:40px 0; text-align:center; color:var(--muted); }
+  .foot { margin-top:44px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; display:grid; gap:6px; text-align:center; }
+
+  /* ---------- شريط الطلب ---------- */
+  .bar { position:fixed; left:0; right:0; bottom:0; z-index:25; padding:10px 16px 14px; background:var(--bg); border-top:1px solid var(--line); }
+  .bar[hidden] { display:none; }
+  .bar button { display:flex; align-items:center; justify-content:space-between; width:100%; max-width:720px; margin:0 auto; min-height:52px; padding:0 18px; border:0; border-radius:14px; background:var(--action); color:var(--on-action); font-weight:700; }
+
+  /* ---------- الورقة (مراجعة الطلب) ---------- */
+  .scrim { position:fixed; inset:0; background:rgba(10,16,14,.5); z-index:50; }
+  .sheet { position:fixed; left:50%; bottom:0; transform:translateX(-50%); width:min(100%,720px); max-height:92%; overflow-y:auto; z-index:51; background:var(--surface); border-radius:20px 20px 0 0; padding:18px 18px 24px; }
+  .sheet-head { display:flex; align-items:center; justify-content:space-between; }
+  .sheet h2 { font:700 24px/1.1 var(--font-display); margin:0; }
+  .x { width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:transparent; font-size:18px; }
+  .line { padding:12px 0; border-bottom:1px solid var(--line); }
+  .lhead { display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center; }
+  .l1 { font-weight:600; }
+  .l2 { color:var(--muted); font-size:13px; }
+  .step { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:999px; }
+  .step button { width:36px; height:36px; border:0; background:transparent; font-size:18px; font-weight:700; }
+  .step span { min-width:20px; text-align:center; font-weight:700; }
+  .lp { font-weight:700; min-width:60px; text-align:right; font-variant-numeric:tabular-nums; }
+  .note-in { width:100%; margin-top:8px; padding:9px 12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); font-size:14px; }
+  .total { display:flex; justify-content:space-between; padding:14px 0 6px; font-weight:700; font-size:18px; }
+  .label { display:block; font-size:13px; font-weight:600; color:var(--muted); margin:14px 0 6px; }
+  textarea.box { width:100%; min-height:64px; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:var(--bg); resize:vertical; }
+  .cta { display:flex; align-items:center; justify-content:center; width:100%; min-height:52px; margin-top:14px; border:0; border-radius:14px; background:var(--action); color:var(--on-action); font-weight:700; font-size:16px; }
+  .cta:disabled { opacity:.45; }
+  .hint { color:var(--muted); font-size:13px; text-align:center; margin:12px 0 0; }
+  .link { display:block; margin:10px auto 0; background:none; border:0; color:var(--muted); text-decoration:underline; font-size:13px; }
+
+  /* ---------- شاشة الشكر والتقييم ---------- */
+  #thanks { position:fixed; inset:0; z-index:70; background:var(--bg); overflow-y:auto; padding:40px 20px; text-align:center; }
+  #thanks .big-emoji { font-size:64px; animation:rise .8s ease-out both; }
+  #thanks h1 { font:700 34px/1.2 var(--font-display); margin:14px 0 4px; }
+  #thanks .fr { color:var(--gold); font-weight:600; }
+  #thanks .ar-msg { font:700 18px/1.6 var(--font-ar); margin:14px 0 0; }
+  #thanks .msg { color:var(--muted); margin:6px auto 0; max-width:42ch; }
+  .review { max-width:420px; margin:28px auto 0; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:18px; }
+  .review h3 { margin:0; font:700 20px/1.2 var(--font-display); }
+  .stars { display:flex; justify-content:center; gap:6px; margin:14px 0; }
+  .stars button { font-size:36px; border:0; background:none; color:#CFC8B5; padding:0 2px; }
+  .stars button.on { color:var(--gold-soft); }
+  .gbtn { display:flex; align-items:center; justify-content:center; width:100%; min-height:50px; margin-top:12px; border-radius:14px; background:var(--ink); color:var(--bg); border:0; font-weight:700; text-decoration:none; }
+
+  .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); z-index:80; background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:999px; font-size:13px; font-weight:600; max-width:90%; text-align:center; }
+  .toast[hidden] { display:none; }
+</style>
+</head>
+<body>
+
+<!-- العرض القصير -->
+<div id="intro">
+  <button class="skip" onclick="hideIntro()">تخطي · Passer</button>
+  <div class="big">Roblo</div>
+  <div class="k">CARTE · OULFA · CASABLANCA</div>
+  <div class="ar">كل شيء يبدأ بالعجين</div>
+  <div class="fr">Tout commence par la pâte</div>
+</div>
+
+<div class="wrap">
+  <header class="hero">
+    <p class="eyebrow">Carte · Livraison 24h/24</p>
+    <h1 class="brand">Roblo</h1>
+    <p class="sub">Touchez un prix pour ajouter un plat à votre commande, puis envoyez-la au serveur.</p>
+    <div class="table-badge" id="tableBadge"></div>
+    <div class="dbwarn" id="dbWarn" hidden>لم يتم ربط قاعدة البيانات بعد. راجعوا إعداد ORDERS_DB_URL.</div>
+  </header>
+
+  <div class="search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Chercher un plat · ابحث عن صنف" autocomplete="off">
+  </div>
+
+  <nav class="nav" id="nav"></nav>
+  <main id="menu"></main>
+  <p class="empty" id="empty" hidden>Aucun plat ne correspond · لا توجد نتائج</p>
+
+  <footer class="foot">
+    <span><strong>Roblo</strong> · Bd Abdelmoumen, Oulfa</span>
+    <span>06 50 52 55 96 · 05 22 89 39 66</span>
+    <span>Prix en dirhams (dh). Supplément frites : 10 dh.</span>
+  </footer>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <button type="button" id="openCart"><span id="barCnt">0</span><span id="barTot">0 dh</span></button>
+</div>
+
+<!-- مراجعة الطلب -->
+<div id="sheet" hidden>
+  <div class="scrim" data-close></div>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-head">
+      <h2>Ma commande · طلبي</h2>
+      <button type="button" class="x" data-close aria-label="إغلاق">✕</button>
+    </div>
+    <div id="lines"></div>
+    <div class="total"><span>Total · المجموع</span><span id="sheetTot">0 dh</span></div>
+    <label class="label" for="gnote">ملاحظة عامة على الطلب (اختياري)</label>
+    <textarea class="box" id="gnote" placeholder="مثال: الطاولة لعيد ميلاد، أسرعوا من فضلكم…"></textarea>
+    <button type="button" class="cta" id="sendBtn">إرسال الطلب إلى النادل</button>
+    <p class="hint" id="sendHint"></p>
+    <button type="button" class="link" id="clearBtn">Vider la commande · إفراغ الطلب</button>
+  </div>
+</div>
+
+<!-- شاشة الشكر والتقييم -->
+<div id="thanks" hidden>
+  <div class="big-emoji">🙏</div>
+  <h1>Merci !</h1>
+  <p class="fr">Bienvenue chez Roblo</p>
+  <p class="ar-msg">شكراً لزيارتكم Roblo!</p>
+  <p class="msg">تم إرسال طلبكم إلى النادل، وسيصلكم قريباً. نتمنى لكم وقتاً ممتعاً ووجبة لذيذة.</p>
+
+  <div class="review">
+    <h3>رأيكم يهمنا · Votre avis compte</h3>
+    <div class="stars" id="stars">
+      <button type="button" data-s="1" aria-label="نجمة 1">★</button>
+      <button type="button" data-s="2" aria-label="نجمتان">★</button>
+      <button type="button" data-s="3" aria-label="3 نجوم">★</button>
+      <button type="button" data-s="4" aria-label="4 نجوم">★</button>
+      <button type="button" data-s="5" aria-label="5 نجوم">★</button>
+    </div>
+    <textarea class="box" id="reviewText" placeholder="شاركونا تعليقكم عن الطعام والخدمة…"></textarea>
+    <button type="button" class="gbtn" id="pubBtn">نشر تقييمي على Google Maps</button>
+    <button type="button" class="link" id="skipBtn">تخطي · Passer</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+  /* ================= الإعدادات ================= */
+  const ORDERS_DB_URL = "https://chez-robio-restaurant-default-rtdb.europe-west1.firebasedatabase.app";
+  // رابط تقييم المطعم على Google. استبدلوا PUT_PLACE_ID_HERE بمعرّف المكان (Place ID)
+  const GOOGLE_REVIEW_URL = "https://search.google.com/local/writereview?placeid=PUT_PLACE_ID_HERE";
+  const DB_READY = !ORDERS_DB_URL.includes("YOUR-PROJECT");
+
+  // الزونات وعدد الطاولات (يجب أن تطابق waiter.html)
+  const ZONES = [
+    { id: "gauche",   label: "صالة يسار",       count: 13 },
+    { id: "centre",   label: "صالة وسط",        count: 13 },
+    { id: "droite",   label: "صالة يمين",       count: 13 },
+    { id: "terrasse", label: "التراس",           count: 4  },
+    { id: "etage",    label: "الطابق العلوي",    count: 18 }
+  ];
+
+  function parseTable(id) {
+    if (!id) return null;
+    for (const z of ZONES) {
+      if (id.startsWith(z.id + "-")) {
+        const n = parseInt(id.slice(z.id.length + 1), 10);
+        if (n >= 1 && n <= z.count) return { id: id, label: z.label + " · " + n };
+      }
+    }
+    return null;
+  }
+  const table = parseTable(new URLSearchParams(location.search).get("table"));
+
+  /* ================= القائمة ================= */
+  // الصنف: [الاسم, السعر أو [سعرين], الوصف]
+  const CATS = [
+    { id: "omelettes", fr: "Omelettes", ar: "عجّة", items: [
+      ["Omelette fromage", 20], ["Omelette Gruyère", 25], ["Omelette Gouda", 25],
+      ["Omelette charcuterie", 20], ["Omelette fromage + charcuterie", 25] ] },
+    { id: "mkila", fr: "Mkila", ar: "مقلّة", opts: ["Sans", "Avec"], legend: "Prix sans fromage · avec fromage", items: [
+      ["Œuf-tomate", [20, 25]], ["Mkila poulet", [25, 32]], ["Mkila khlii", [25, 32]], ["Mkila kefta", [25, 32]],
+      ["Mkila crevettes", [25, 32]], ["Mkila calamar", [25, 32]], ["Mkila fruits de mer", [35, 42]] ] },
+    { id: "tagines", fr: "Tagines", ar: "طواجن", items: [["Tagine poulet", 45], ["Tagine viande", 55]] },
+    { id: "couscous", fr: "Couscous", ar: "كسكس", tag: "Chaque vendredi", items: [["Couscous poulet", 45], ["Couscous viande", 55]] },
+    { id: "rfissa", fr: "Rfissa", ar: "رفيسة", tag: "Chaque mercredi", items: [["Rfissa", 45]] },
+    { id: "pates", fr: "Pâtes", ar: "معكرونة", items: [
+      ["Carbonara charcuterie", 38], ["Carbonara poulet", 38], ["Carbonara viande hachée", 38],
+      ["Spaghetti bolognaise", 38], ["Lasagne bolognaise", 50], ["Tagliatelle fruits de mer", 60] ] },
+    { id: "pasticcios", fr: "Pasticcios · Gratins", ar: "غراتان", items: [
+      ["Pasticcio charcuterie", 38], ["Pasticcio poulet", 38], ["Pasticcio viande hachée", 38],
+      ["Pasticcio mixte", 42], ["Pasticcio fruits de mer", 60], ["Gratin fruits de mer", 60] ] },
+    { id: "tacos", fr: "Tacos", ar: "تاكوس", note: "Supplément gratiné disponible.", items: [
+      ["Tacos poulet", 37], ["Tacos viande hachée", 42], ["Tacos nuggets", 40],
+      ["Tacos chicken crispy", 40], ["Tacos mixtes", 45], ["Tacos cordon bleu", 45] ] },
+    { id: "salades", fr: "Salades", ar: "سلطات", items: [
+      ["César", 45, "Laitue, tomates cerises, poulet grillé, croûtons, parmesan"],
+      ["Niçoise", 45, "Laitue, tomate, thon, œuf, oignon, poivron, pomme de terre, haricots, carotte, betterave"],
+      ["Mexicaine", 45, "Thon, maïs, poivron, œuf, fromage Edam, riz"],
+      ["Roblo", 60, "Laitue, tomates cerises, carotte, betterave, pomme, poulet grillé, avocat, riz, raisins secs"],
+      ["Fruits de mer", 60],
+      ["Salade Quinoa", 75, "Salade rouge, quinoa, gambas, avocat, mangue, haricots rouges, racine de soja, fruits rouges, sésame"],
+      ["Salade Family", 110, "Mesclun, gambas, thon, surimi, avocat, champignons, riz, quinoa, mangue, sépia, moules, légumes grillés, tomates cerises, sauce balsamique au miel"] ] },
+    { id: "grillades", fr: "Grillades", ar: "مشويات", note: "Servies avec pâtes, légumes et frites.", items: [
+      ["Plat chicken", 50], ["Steak de poulet", 60], ["Émincée de poulet", 60], ["Brochettes poulet", 60],
+      ["Plat nuggets", 60], ["Plat milanaise", 60], ["Cordon bleu", 60], ["Brochettes kefta", 60],
+      ["Plat saucisse", 60], ["Plat saucisse de foie", 60], ["Brochettes de foie", 75], ["Brochettes bœuf", 70],
+      ["Faux filet de bœuf", 70], ["Émincé de bœuf", 70], ["Suprême de poulet", 69], ["Plat mixte", 75] ] },
+    { id: "burgers", fr: "Burgers", ar: "برغر", items: [
+      ["Burger poulet", 37], ["Burger cheese", 37], ["Burger double cheese", 45],
+      ["Burger chicken crispy", 40], ["Burger mixte", 50] ] },
+    { id: "poissons", fr: "Poissons", ar: "أسماك", items: [
+      ["Friture mixte", 85], ["Plat saumon", 80], ["Plat espadon", 80], ["Plat duo", 90], ["Paella", 70], ["Plat loup bar", 100] ] },
+    { id: "pizza", fr: "Pizza", ar: "بيتزا", opts: ["P", "G"], legend: "P petite · G grande", items: [
+      ["Margherita", [35, 45]], ["Thon", [40, 50]], ["Hot dog", [40, 50]], ["4 fromages", [40, 50]],
+      ["Végétarienne", [40, 50]], ["Poulet", [40, 50]], ["Pepperoni", [40, 50]], ["Charcuterie", [40, 50]],
+      ["Bolognaise", [45, 55]], ["4 saisons", [55, 70]], ["Mixte", [55, 70]], ["Fruits de mer", [55, 70]], ["Roblo", [60, 75]] ] },
+    { id: "ciabatta", fr: "Sandwich Ciabatta", ar: "ساندويتش", items: [
+      ["Thon + frites", 38], ["Hot dog + frites", 38], ["Viande hachée + frites", 40], ["Saucisse + frites", 40],
+      ["Saucisse de foie + frites", 40], ["Poulet + frites", 40], ["Fruits de mer + frites", 45] ] },
+    { id: "paninis", fr: "Paninis", ar: "بانيني", items: [["Khlii", 22], ["Charcuterie", 22], ["4 fromages", 22]] },
+    { id: "croquettes", fr: "Croquettes", ar: "كروكيت", items: [["Thon", 50], ["Viande hachée", 50], ["Fromages", 50], ["Poulet", 50]] },
+    { id: "patatra", fr: "Patatra", ar: "بطاطا محشية", items: [["Charcuterie", 40], ["Viande hachée", 40], ["Poulet", 40], ["Fruits de mer", 50]] },
+    { id: "bowls", fr: "Bowls", ar: "بولز", items: [["Viande hachée", 40], ["Sawarma", 50], ["Chicken", 50], ["Poulet", 50]] },
+    { id: "risotto", fr: "Risotto", ar: "ريزوتو", items: [["Risotto poulet", 50], ["Risotto fruits de mer", 60]] },
+    { id: "risotto2", fr: "Risotto gourmet", ar: "ريزوتو", items: [["Poulet", 60], ["Truffe", 64], ["Fruits de mer", 70], ["Saumon", 74]] },
+    { id: "desserts", fr: "Desserts", ar: "حلويات", items: [
+      ["Flan", 6], ["Panna cotta", 15], ["Mhalabiya", 15], ["Forêt noire", 15], ["Tiramisu", 20], ["Cheese cake", 25] ] },
+    { id: "jus", fr: "Jus", ar: "عصائر", opts: ["P", "G"], legend: "P petit · G grand", items: [
+      ["Jus d'orange", [20, 25]], ["Jus de citron", [20, 25]], ["Jus de carotte", [20, 25]], ["Jus de banane", [20, 25]],
+      ["Jus de pomme", [20, 25]], ["Jus citron-gingembre", [22, 27]], ["Jus de concombre", [22, 27]],
+      ["Jus de fraise", [22, 27]], ["Jus de pêche", [22, 27]], ["Jus de mangue", [22, 27]], ["Jus de kiwi", [22, 27]],
+      ["Jus de kaki", [22, 27]], ["Jus d'ananas", [22, 27]], ["Jus d'avocat", [22, 27]], ["Panaché", [22, 27]],
+      ["Mangue-fraise-ananas", [22, 27]], ["Jus de fruits rouges", [22, 27]], ["Mojito", [22, 27]],
+      ["Jus exotique", [22, 27]], ["Smoothie", [22, 27]], ["Jus séparé", [22, 27]],
+      ["Jus avocat + fruits secs", [25, 30]], ["Jus fruit de dragon", [25, 30]], ["Jus Roblo", [25, 30]],
+      ["Jus de fruits secs", [25, 30]], ["Jus zazzaz", [30, 35]] ] },
+    { id: "fruits", fr: "Salades de fruits", ar: "سلطة فواكه", items: [
+      ["Salade de fruits", 30], ["Raib fruits", 30], ["Salade de fruits plat", 40], ["Salade de fruits Roblo", 45] ] },
+    { id: "toppings", fr: "Toppings", ar: "إضافات", items: [
+      ["Fruits secs", 5], ["Oreo", 7], ["Kitkat", 7], ["Bueno", 12], ["Ferrero Rocher", 15], ["Crunch", 18] ] }
+  ];
+
+  /* ================= أدوات ================= */
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200);
+  }
+
+  /* ================= الطاولة ================= */
+  const badge = $("#tableBadge");
+  if (table) {
+    badge.textContent = "🪑 " + table.label;
+  } else {
+    badge.textContent = "امسحوا رمز QR الموجود على طاولتكم";
+    badge.classList.add("warn");
+  }
+  if (!DB_READY) $("#dbWarn").hidden = false;
+
+  /* ================= العرض القصير ================= */
+  let introTimer = setTimeout(hideIntro, 3000);
+  function hideIntro() {
+    clearTimeout(introTimer);
+    $("#intro").classList.add("hide");
+  }
+
+  /* ================= بناء القائمة ================= */
+  const menu = $("#menu"), nav = $("#nav");
+  const cart = new Map(); // key -> { name, label, price, qty, note }
+
+  let navHtml = "", menuHtml = "";
+  CATS.forEach((c, ci) => {
+    navHtml += `<button type="button" class="chip" data-target="c-${c.id}">${esc(c.fr)}</button>`;
+    let h = `<section class="cat" id="c-${c.id}" data-name="${esc(norm(c.fr))}">`;
+    h += `<div class="cat-head"><div><h2>${esc(c.fr)}</h2>${c.tag ? `<div class="tag">${esc(c.tag)}</div>` : ""}</div><span class="ar-title" lang="ar">${c.ar}</span></div>`;
+    h += `<hr class="rule">`;
+    if (c.note) h += `<p class="note">${esc(c.note)}</p>`;
+    if (c.legend) h += `<p class="legend">${esc(c.legend)}</p>`;
+    h += `<ul class="items">`;
+    c.items.forEach((it, ii) => {
+      const [name, price, desc] = it;
+      const prices = Array.isArray(price) ? price : [price];
+      const btns = prices.map((p, oi) => {
+        const label = c.opts ? c.opts[oi] : "";
+        const key = `${ci}.${ii}.${oi}`;
+        return `<button type="button" class="pbtn" data-key="${key}" data-name="${esc(name)}" data-label="${esc(label)}" data-price="${p}">` +
+          (label ? `<span class="sz">${esc(label)}</span>` : "") +
+          `<span>${p}<i> dh</i></span><b class="q"></b></button>`;
+      }).join("");
+      h += `<li class="item" data-s="${esc(norm(name + " " + (desc || "")))}">` +
+           `<div class="txt"><span class="nm">${esc(name)}</span>${desc ? `<span class="ds">${esc(desc)}</span>` : ""}</div>` +
+           `<div class="pr">${btns}</div></li>`;
+    });
+    h += `</ul></section>`;
+    menuHtml += h;
+  });
+  nav.innerHTML = navHtml;
+  menu.innerHTML = menuHtml;
+
+  const secs = [...menu.querySelectorAll(".cat")];
+  const chips = [...nav.querySelectorAll(".chip")];
+
+  nav.addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    document.getElementById(b.dataset.target).scrollIntoView({ block: "start", behavior: "smooth" });
+  });
+
+  let ticking = false;
+  function spy() {
+    ticking = false;
+    let cur = null;
+    secs.forEach(s => { if (!s.hidden && s.getBoundingClientRect().top <= 120) cur = s; });
+    chips.forEach(ch => {
+      const on = cur && ch.dataset.target === cur.id;
+      ch.classList.toggle("on", !!on);
+      if (on) nav.scrollLeft = ch.offsetLeft - nav.clientWidth / 2 + ch.clientWidth / 2;
+    });
+  }
+  window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }, { passive: true });
+  spy();
+
+  // بحث
+  $("#q").addEventListener("input", e => {
+    const q = norm(e.target.value.trim());
+    let any = false;
+    secs.forEach((s, i) => {
+      let vis = 0;
+      const catMatch = q && s.dataset.name.includes(q);
+      s.querySelectorAll(".item").forEach(li => {
+        const m = !q || catMatch || li.dataset.s.includes(q);
+        li.hidden = !m;
+        if (m) vis++;
+      });
+      s.hidden = !vis;
+      chips[i].hidden = !vis;
+      if (vis) any = true;
+    });
+    $("#empty").hidden = any;
+    spy();
+  });
+
+  /* ================= السلة ================= */
+  menu.addEventListener("click", e => {
+    const b = e.target.closest(".pbtn"); if (!b) return;
+    const k = b.dataset.key;
+    const l = cart.get(k);
+    if (l) l.qty++;
+    else cart.set(k, { name: b.dataset.name, label: b.dataset.label, price: +b.dataset.price, qty: 1, note: "" });
+    refresh();
+  });
+
+  function totals() {
+    let t = 0, n = 0;
+    cart.forEach(l => { t += l.price * l.qty; n += l.qty; });
+    return { t, n };
+  }
+
+  function refresh() {
+    const { t, n } = totals();
+    menu.querySelectorAll(".pbtn").forEach(b => {
+      const l = cart.get(b.dataset.key);
+      b.classList.toggle("has", !!l);
+      b.querySelector(".q").textContent = l ? l.qty : "";
+    });
+    $("#bar").hidden = n === 0;
+    $("#barCnt").textContent = n + (n > 1 ? " articles" : " article");
+    $("#barTot").textContent = t + " dh";
+    $("#sheetTot").textContent = t + " dh";
+    renderLines();
+    $("#sendBtn").disabled = !(n > 0 && table);
+    $("#sendHint").textContent = !table ? "امسحوا رمز QR الموجود على طاولتكم لإرسال الطلب" : "";
+  }
+
+  function renderLines() {
+    const box = $("#lines");
+    if (!cart.size) {
+      box.innerHTML = `<p class="hint">Votre commande est vide. Touchez un prix dans la carte.</p>`;
+      return;
+    }
+    let h = "";
+    cart.forEach((l, k) => {
+      h += `<div class="line">
+        <div class="lhead">
+          <div><div class="l1">${esc(l.name)}</div><div class="l2">${l.label ? esc(l.label) + " · " : ""}${l.price} dh</div></div>
+          <div class="step"><button type="button" data-step="-1" data-k="${k}">−</button><span>${l.qty}</span><button type="button" data-step="1" data-k="${k}">+</button></div>
+          <div class="lp">${l.price * l.qty} dh</div>
+        </div>
+        <input class="note-in" data-nk="${k}" placeholder="ملاحظة لهذا الصنف (مثال: بدون ملح)" value="${esc(l.note)}">
+      </div>`;
+    });
+    box.innerHTML = h;
+  }
+
+  $("#lines").addEventListener("click", e => {
+    const b = e.target.closest("[data-step]"); if (!b) return;
+    const k = b.dataset.k, l = cart.get(k); if (!l) return;
+    l.qty += +b.dataset.step;
+    if (l.qty <= 0) cart.delete(k);
+    refresh();
+  });
+  // الملاحظة تُحفظ عند الكتابة بدون إعادة رسم الحقل
+  $("#lines").addEventListener("input", e => {
+    const k = e.target.dataset.nk; if (k === undefined) return;
+    const l = cart.get(k); if (l) l.note = e.target.value;
+  });
+
+  /* ================= الورقة ================= */
+  const sheet = $("#sheet");
+  function openSheet() { sheet.hidden = false; document.body.style.overflow = "hidden"; }
+  function closeSheet() { sheet.hidden = true; document.body.style.overflow = ""; }
+  $("#openCart").addEventListener("click", openSheet);
+  sheet.addEventListener("click", e => { if (e.target.closest("[data-close]")) closeSheet(); });
+  $("#clearBtn").addEventListener("click", () => { cart.clear(); $("#gnote").value = ""; refresh(); });
+
+  /* ================= إرسال الطلب ================= */
+  $("#sendBtn").addEventListener("click", async () => {
+    if (!table) { toast("امسحوا رمز QR أولاً"); return; }
+    if (!DB_READY) { toast("قاعدة البيانات غير مربوطة بعد"); return; }
+    if (!cart.size) return;
+
+    const items = [];
+    cart.forEach(l => items.push({
+      name: l.name + (l.label ? " (" + l.label + ")" : ""),
+      qty: l.qty, unit: l.price, subtotal: l.price * l.qty, note: (l.note || "").trim()
+    }));
+    const order = {
+      table: table.label,
+      tableId: table.id,
+      items: items,
+      total: totals().t,
+      generalNote: $("#gnote").value.trim(),
+      status: "new",
+      acceptedBy: null,
+      time: new Date().toISOString()
+    };
+
+    const btn = $("#sendBtn");
+    btn.disabled = true; btn.textContent = "جاري الإرسال…";
+    try {
+      const res = await fetch(`${ORDERS_DB_URL}/orders.json`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(order)
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      cart.clear(); $("#gnote").value = "";
+      refresh();
+      closeSheet();
+      showThanks();
+    } catch (err) {
+      toast("تعذر إرسال الطلب، أعيدوا المحاولة");
+    } finally {
+      btn.textContent = "إرسال الطلب إلى النادل";
+      refresh();
+    }
+  });
+
+  /* ================= شاشة الشكر والتقييم ================= */
+  let stars = 0;
+  function showThanks() {
+    stars = 0; $("#reviewText").value = "";
+    paintStars();
+    $("#thanks").hidden = false;
+    $("#thanks").scrollTop = 0;
+  }
+  function closeThanks() { $("#thanks").hidden = true; }
+
+  function paintStars() {
+    $("#stars").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.s <= stars));
+  }
+  $("#stars").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    stars = +b.dataset.s; paintStars();
+  });
+
+  $("#pubBtn").addEventListener("click", async () => {
+    if (!stars) { toast("اختاروا عدد النجوم أولاً"); return; }
+    const text = $("#reviewText").value.trim();
+
+    // حفظ التقييم عند المطعم
+    if (DB_READY) {
+      try {
+        await fetch(`${ORDERS_DB_URL}/reviews.json`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stars, comment: text, table: table ? table.label : "", time: new Date().toISOString() })
+        });
+      } catch (e) {}
+    }
+    // Google لا يسمح بتعبئة التعليق مسبقاً، لذلك ننسخه للزبون
+    if (text) { try { await navigator.clipboard.writeText(text); } catch (e) {} }
+    window.open(GOOGLE_REVIEW_URL, "_blank", "noopener");
+    toast(text ? "تم نسخ تعليقكم، الصقوه في Google" : "شكراً لتقييمكم!");
+    setTimeout(closeThanks, 1200);
+  });
+  $("#skipBtn").addEventListener("click", closeThanks);
+
+  /* ================= بدء ================= */
+  refresh();
+</script>
+</body>
+</html>
