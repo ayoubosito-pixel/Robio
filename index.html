@@ -26,7 +26,12 @@
   #intro .k { margin-top:14px; letter-spacing:.3em; font-size:12px; color:#E6C98A; animation:rise 1.2s .3s ease-out both; }
   #intro .ar { margin-top:18px; font:700 22px/1.4 var(--font-ar); animation:rise 1.2s .6s ease-out both; }
   #intro .fr { margin-top:6px; opacity:.8; font-size:14px; animation:rise 1.2s .8s ease-out both; }
-  #intro .skip { position:absolute; top:18px; left:18px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:999px; padding:7px 14px; font-size:13px; }
+  #intro .skip { position:absolute; top:18px; left:18px; z-index:2; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:999px; padding:7px 14px; font-size:13px; }
+  #intro video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
+  #intro::after { content:""; position:absolute; inset:0; z-index:1; background:linear-gradient(180deg, rgba(8,47,45,.55) 0%, rgba(8,47,45,.25) 45%, rgba(8,47,45,.75) 100%); pointer-events:none; }
+  #intro .brand-box { position:relative; z-index:2; }
+  #intro .big { font-size:clamp(44px,13vw,88px); }
+  #intro .rest { margin-top:8px; letter-spacing:.42em; font-size:clamp(11px,3vw,14px); color:#fff; opacity:.9; text-transform:uppercase; padding-inline-start:.42em; animation:rise 1.2s .3s ease-out both; }
   @keyframes rise { from { opacity:0; transform:translateY(18px) scale(1.03); } to { opacity:1; transform:none; } }
 
   /* ---------- الرأس ---------- */
@@ -121,11 +126,15 @@
 
 <!-- العرض القصير -->
 <div id="intro">
+  <video id="introVideo" src="intro.mp4" autoplay muted playsinline preload="auto" onended="hideIntro()"></video>
   <button class="skip" onclick="hideIntro()">تخطي · Passer</button>
-  <div class="big">Roblo</div>
-  <div class="k">CARTE · OULFA · CASABLANCA</div>
-  <div class="ar">كل شيء يبدأ بالعجين</div>
-  <div class="fr">Tout commence par la pâte</div>
+  <div class="brand-box">
+    <div class="big">Chez Robio</div>
+    <div class="rest">Restaurant</div>
+    <div class="k">CARTE · OULFA · CASABLANCA</div>
+    <div class="ar">كل شيء يبدأ بالعجين</div>
+    <div class="fr">Tout commence par la pâte</div>
+  </div>
 </div>
 
 <div class="wrap">
@@ -318,10 +327,12 @@
   if (!DB_READY) $("#dbWarn").hidden = false;
 
   /* ================= العرض القصير ================= */
-  let introTimer = setTimeout(hideIntro, 3000);
+  let introTimer = setTimeout(hideIntro, 12000); // احتياط إذا ما اشتغلش الفيديو
   function hideIntro() {
     clearTimeout(introTimer);
     $("#intro").classList.add("hide");
+    const v = document.getElementById("introVideo");
+    if (v) { try { v.pause(); } catch (e) {} }
   }
 
   /* ================= بناء القائمة ================= */
