@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>شاشة المطبخ · Chez Robio</title>
+<style>
+  :root { --bg:#111418; --card:#1c2128; --ink:#f5f5f5; --muted:#9aa4af; --red:#F26A1B; --green:#16a34a; --line:#2d3540; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Segoe UI',Tahoma,sans-serif; padding:14px 14px 40px; }
+  header { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  h1 { margin:0; font-size:20px; color:var(--red); }
+  #status { font-size:13px; color:var(--muted); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+  .ticket { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .ticket.late { border-color:var(--red); box-shadow:0 0 0 2px rgba(242,106,27,.35); }
+  .top { display:flex; justify-content:space-between; align-items:center; }
+  .table { font-size:22px; font-weight:800; }
+  .code { font-size:13px; color:var(--muted); letter-spacing:.06em; }
+  .time { font-size:13px; color:var(--muted); }
+  .time b { color:var(--ink); }
+  .line { padding:8px 0; border-top:1px dashed var(--line); }
+  .qty { display:inline-block; min-width:30px; font-weight:800; color:var(--red); }
+  .note { margin-top:4px; background:#3a2a10; color:#ffd58a; border-radius:8px; padding:5px 8px; font-size:13px; }
+  .gnote { background:#3a2a10; color:#ffd58a; border:1px solid var(--red); border-radius:10px; padding:8px 10px; font-size:14px; }
+  .btn { width:100%; min-height:52px; border:0; border-radius:12px; background:var(--green); color:#fff; font-weight:800; font-size:17px; cursor:pointer; margin-top:4px; }
+  .btn:disabled { opacity:.5; }
+  .empty { text-align:center; color:var(--muted); margin-top:60px; font-size:18px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍳 شاشة المطبخ</h1>
+  <span id="status">جاري التحميل...</span>
+</header>
+
+<div class="grid" id="list"></div>
+<p class="empty" id="empty" hidden>لا توجد طلبات في التحضير</p>
+
+<script>
+  const ORDERS_DB_URL = "https://chez-robio-restaurant-default-rtdb.europe-west1.firebasedatabase.app";
+  const REFRESH_MS = 3000;
+  const LATE_MIN = 15; // بعد هذه المدة (بالدقائق) تظهر البطاقة بإطار أحمر
+  let orders = {};
+  let knownIds = new Set();
+  let firstLoad = true;
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  const code = id => id.slice(-4).toUpperCase();
+  const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit" }) : "";
+  const minsSince = iso => iso ? Math.floor((Date.now() - new Date(iso)) / 60000) : 0;
+
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 660; g.gain.value = 0.2;
+      o.start(); o.stop(ctx.currentTime + 0.5);
+    } catch (e) {}
+  }
+
+  async function load() {
+    try {
+      const res = await fetch(`${ORDERS_DB_URL}/orders.json`);
+      orders = (await res.json()) || {};
+      const ids = Object.entries(orders).filter(([, o]) => o.status === "accepted").map(([id]) => id);
+      if (!firstLoad && ids.some(id => !knownIds.has(id))) beep();
+      knownIds = new Set(ids);
+      firstLoad = false;
+      $("status").textContent = "محدّث " + new Date().toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      render();
+    } catch (e) {
+      $("status").textContent = "تعذر الاتصال";
+    }
+  }
+
+  function render() {
+    const list = Object.entries(orders)
+      .filter(([, o]) => o.status === "accepted")
+      .sort((a, b) => new Date(a[1].acceptedAt || a[1].time) - new Date(b[1].acceptedAt || b[1].time));
+    $("empty").hidden = list.length > 0;
+    $("list").innerHTML = list.map(([id, o]) => {
+      const mins = minsSince(o.acceptedAt || o.time);
+      const lines = (o.items || []).map(it => `
+        <div class="line">
+          <span class="qty">${it.qty}×</span> ${esc(it.name)}
+          ${it.note ? `<div class="note">📝 ${esc(it.note)}</div>` : ""}
+        </div>`).join("");
+      return `<article class="ticket ${mins >= LATE_MIN ? "late" : ""}">
+        <div class="top"><span class="table">${esc(o.table)}</span><span class="code">#${code(id)}</span></div>
+        <div class="time">قبله <b>${esc(o.acceptedBy || "")}</b> · منذ <b>${mins}</b> دقيقة</div>
+        ${o.generalNote ? `<div class="gnote"><b>ملاحظة الزبون:</b> ${esc(o.generalNote)}</div>` : ""}
+        <div>${lines}</div>
+        <button class="btn" data-ready="${id}">✅ جاهز للتقديم</button>
+      </article>`;
+    }).join("");
+  }
+
+  $("list").addEventListener("click", async e => {
+    const b = e.target.closest("[data-ready]"); if (!b) return;
+    b.disabled = true;
+    try {
+      const res = await fetch(`${ORDERS_DB_URL}/orders/${b.dataset.ready}.json`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ready", readyAt: new Date().toISOString() })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      load();
+    } catch (err) {
+      b.disabled = false;
+      alert("تعذر تحديث الطلب، أعيدوا المحاولة");
+    }
+  });
+
+  load();
+  setInterval(load, REFRESH_MS);
+</script>
+</body>
+</html>

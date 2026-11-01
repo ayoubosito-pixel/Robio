@@ -288,7 +288,7 @@
   </header>
 
   <div class="track" id="track" hidden>
-    <div class="trk-h">حالة طلبكم <span id="trkNote"></span></div>
+    <div class="trk-h">حالة طلبكم <span id="trkCode"></span> <span id="trkNote"></span></div>
     <ol class="trk-steps">
       <li data-st="new"><span>📨</span>تم الإرسال</li>
       <li data-st="accepted"><span>✅</span>قبله النادل</li>
@@ -829,16 +829,17 @@
     saveTrack(id);
     clearInterval(trackTimer);
     $("#track").hidden = false;
+    $("#trkCode").textContent = "· رقم الطلب #" + id.slice(-4).toUpperCase();
     const order = ["new", "accepted", "ready", "served"];
     const tick = async () => {
       try {
         const r = await fetch(`${ORDERS_DB_URL}/orders/${id}.json`);
         const o = await r.json();
         if (!o) return;
-        const idx = order.indexOf(o.status);
+        const idx = order.indexOf(o.status === "paid" ? "served" : o.status);
         document.querySelectorAll("#track .trk-steps li").forEach((li, i) => li.classList.toggle("done", i <= idx));
         $("#trkNote").textContent = o.status === "cancelled" ? "· تم إلغاء الطلب، سولو النادل" : (o.status === "served" ? "· بالصحة والهنا 🙏" : "");
-        if (o.status === "served" || o.status === "cancelled") {
+        if (o.status === "served" || o.status === "paid" || o.status === "cancelled") {
           clearInterval(trackTimer);
           try { localStorage.removeItem(TRACK_KEY); } catch (e) {}
         }

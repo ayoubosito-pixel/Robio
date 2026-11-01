@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الكاشير · Chez Robio</title>
+<style>
+  :root { --bg:#f3f4f6; --ink:#111827; --muted:#6b7280; --red:#F26A1B; --green:#16a34a; --line:#e5e7eb; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Segoe UI',Tahoma,sans-serif; padding:14px 14px 40px; }
+  header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  h1 { margin:0; font-size:20px; }
+  #status { font-size:13px; color:var(--muted); }
+  .tabs { display:flex; gap:8px; margin:14px 0; }
+  .tabs button { flex:1; padding:11px; border:0; border-radius:12px; background:#fff; font-weight:700; cursor:pointer; }
+  .tabs button.on { background:var(--ink); color:#fff; }
+  input, select { width:100%; padding:12px; border:1px solid var(--line); border-radius:12px; font:inherit; background:#fff; }
+  .card { background:#fff; border-radius:16px; padding:14px; margin-top:10px; box-shadow:0 2px 8px rgba(0,0,0,.05); cursor:pointer; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .code { font-weight:800; font-size:18px; letter-spacing:.08em; }
+  .table { font-weight:700; }
+  .tag { font-size:12px; padding:3px 9px; border-radius:999px; background:#eef2ff; color:#3730a3; font-weight:700; white-space:nowrap; }
+  .tag.rdy { background:#dcfce7; color:#166534; }
+  .tag.srv { background:#fef3c7; color:#92400e; }
+  .muted { color:var(--muted); font-size:13px; }
+  .amt { font-weight:800; color:var(--red); font-size:18px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .kpi { background:#fff; border-radius:16px; padding:14px; }
+  .kpi span { font-size:13px; color:var(--muted); }
+  .kpi b { display:block; font-size:22px; margin-top:4px; }
+  h3 { margin:20px 0 8px; font-size:16px; }
+  .bar-row { display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:15px; }
+  .btn { width:100%; min-height:50px; border:0; border-radius:14px; background:var(--red); color:#fff; font-weight:800; font-size:16px; margin-top:12px; cursor:pointer; }
+  .btn.alt { background:#fff; color:var(--ink); border:1px solid var(--line); }
+  .btn:disabled { opacity:.5; }
+  #modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:flex-end; justify-content:center; z-index:9; }
+  .sheet { background:#fff; width:min(100%,640px); max-height:92vh; overflow:auto; border-radius:22px 22px 0 0; padding:18px; }
+  .line { display:flex; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px dashed var(--line); }
+  .note { color:#92400e; background:#fef3c7; border-radius:8px; padding:4px 8px; font-size:13px; margin-top:4px; }
+  .total-row { display:flex; justify-content:space-between; font-size:20px; font-weight:800; margin-top:12px; color:var(--red); }
+  label { display:block; font-weight:700; font-size:14px; margin-top:14px; }
+  [hidden] { display:none !important; }
+  #inv { display:none; }
+  #inv table { width:100%; border-collapse:collapse; margin-top:10px; }
+  #inv td, #inv th { border-bottom:1px solid #ddd; padding:6px 4px; text-align:right; font-size:13px; }
+  @media print {
+    body * { visibility:hidden; }
+    #inv, #inv * { visibility:visible; }
+    #inv { display:block; position:absolute; left:0; top:0; width:100%; padding:10mm; color:#000; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧾 الكاشير · Chez Robio</h1>
+  <span id="status">جاري التحميل...</span>
+</header>
+
+<div class="tabs">
+  <button class="on" data-tab="orders">الطلبات والفواتير</button>
+  <button data-tab="dash">لوحة المؤشرات</button>
+</div>
+
+<section id="tab-orders">
+  <input id="q" type="search" placeholder="ابحث برقم الطلب (4 حروف) أو رقم الطاولة" autocomplete="off">
+  <div id="list"></div>
+  <p class="muted" id="empty" hidden>لا توجد طلبات غير مدفوعة</p>
+</section>
+
+<section id="tab-dash" hidden>
+  <div class="grid" id="kpis"></div>
+  <h3>طرق الدفع اليوم</h3>
+  <div id="pay"></div>
+  <h3>أكثر الأصناف طلباً اليوم</h3>
+  <div id="top"></div>
+  <h3>المبيعات حسب النادل</h3>
+  <div id="byW"></div>
+</section>
+
+<div id="modal" hidden><div class="sheet" id="sheetBody"></div></div>
+<div id="inv"></div>
+
+<script>
+  const ORDERS_DB_URL = "https://chez-robio-restaurant-default-rtdb.europe-west1.firebasedatabase.app";
+  const REFRESH_MS = 4000;
+  const PIN = "1234"; // غيّروه قبل النشر. هذا حماية بسيطة وليست أمناً حقيقياً
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  const code = id => id.slice(-4).toUpperCase();
+  const money = n => (+n || 0).toFixed(2).replace(/\.00$/, "") + " DH";
+  const dayKey = d => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+  const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit" }) : "";
+  const STATUS_AR = { new: "جديد", accepted: "قيد التحضير", ready: "جاهز", served: "مقدّم", paid: "مدفوع", cancelled: "ملغي" };
+  const PAY_AR = { cash: "نقداً", card: "بطاقة بنكية", mobile: "Cash Plus / Mobile" };
+
+  let orders = {};
+  let tab = "orders";
+  let openId = null;
+
+  function start() {
+    document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+      tab = b.dataset.tab;
+      document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+      $("tab-orders").hidden = tab !== "orders";
+      $("tab-dash").hidden = tab !== "dash";
+      render();
+    }));
+    $("q").addEventListener("input", render);
+    $("list").addEventListener("click", e => {
+      const c = e.target.closest("[data-id]"); if (c) openOrder(c.dataset.id);
+    });
+    $("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
+    load();
+    setInterval(load, REFRESH_MS);
+  }
+
+  if (sessionStorage.getItem("caisse-ok") === "1" || prompt("code staff") === PIN) {
+    sessionStorage.setItem("caisse-ok", "1");
+    start();
+  } else {
+    document.body.innerHTML = "<p style='padding:20px'>الوصول مرفوض</p>";
+  }
+
+  async function load() {
+    try {
+      const res = await fetch(`${ORDERS_DB_URL}/orders.json`);
+      orders = (await res.json()) || {};
+      $("status").textContent = "محدّث " + new Date().toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      render();
+    } catch (e) {
+      $("status").textContent = "تعذر الاتصال";
+    }
+  }
+
+  function render() {
+    if (tab === "orders") renderOrders(); else renderDash();
+  }
+
+  function unpaid() {
+    return Object.entries(orders)
+      .filter(([, o]) => o.status !== "paid" && o.status !== "cancelled" && o.status !== "new")
+      .sort((a, b) => new Date(a[1].time) - new Date(b[1].time));
+  }
+
+  function renderOrders() {
+    const q = $("q").value.trim().toLowerCase();
+    const list = unpaid().filter(([id, o]) => !q || code(id).toLowerCase() === q || code(id).toLowerCase().includes(q) || String(o.table || "").toLowerCase().includes(q));
+    $("empty").hidden = list.length > 0;
+    $("list").innerHTML = list.map(([id, o]) => {
+      const cls = o.status === "ready" ? "rdy" : o.status === "served" ? "srv" : "";
+      return `<div class="card" data-id="${id}">
+        <div class="row"><span class="code">#${code(id)}</span><span class="tag ${cls}">${STATUS_AR[o.status] || o.status}</span></div>
+        <div class="row" style="margin-top:6px"><span class="table">${esc(o.table)}</span><span class="amt">${money(o.total)}</span></div>
+        <div class="muted">${fmtTime(o.time)} · ${(o.items || []).length} صنف${o.acceptedBy ? " · " + esc(o.acceptedBy) : ""}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function openOrder(id) {
+    const o = orders[id]; if (!o) return;
+    openId = id;
+    const lines = (o.items || []).map(it => `
+      <div class="line"><div>${it.qty}× ${esc(it.name)}${it.note ? `<div class="note">📝 ${esc(it.note)}</div>` : ""}</div><b>${money(it.subtotal)}</b></div>`).join("");
+    $("sheetBody").innerHTML = `
+      <div class="row"><span class="code">#${code(id)}</span><span class="tag">${STATUS_AR[o.status] || o.status}</span></div>
+      <h2 style="margin:8px 0 2px">${esc(o.table)}</h2>
+      <div class="muted">${fmtTime(o.time)}${o.acceptedBy ? " · النادل: " + esc(o.acceptedBy) : ""}</div>
+      ${o.generalNote ? `<div class="note" style="margin-top:10px"><b>ملاحظة الزبون:</b> ${esc(o.generalNote)}</div>` : ""}
+      <div style="margin-top:10px">${lines}</div>
+      <div class="total-row"><span>المجموع</span><span>${money(o.total)}</span></div>
+      <label for="payMethod">طريقة الدفع</label>
+      <select id="payMethod">
+        <option value="cash">نقداً</option>
+        <option value="card">بطاقة بنكية</option>
+        <option value="mobile">Cash Plus / Mobile</option>
+      </select>
+      <button class="btn" id="payBtn">🧾 إصدار الفاتورة وتأكيد الدفع</button>
+      <button class="btn alt" id="closeBtn">إغلاق</button>`;
+    $("sheetBody").querySelector("#closeBtn").addEventListener("click", closeModal);
+    $("sheetBody").querySelector("#payBtn").addEventListener("click", pay);
+    $("modal").hidden = false;
+  }
+
+  function closeModal() { $("modal").hidden = true; openId = null; }
+
+  async function pay() {
+    const id = openId; const o = orders[id]; if (!o) return;
+    const method = $("payMethod").value;
+    const now = new Date();
+    const invoiceNo = `F${dayKey(now).replace(/-/g, "")}-${code(id)}`;
+    const btn = $("payBtn"); btn.disabled = true;
+    try {
+      const res = await fetch(`${ORDERS_DB_URL}/orders/${id}.json`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "paid", paidAt: now.toISOString(), payment: method, invoiceNo })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      orders[id] = { ...o, status: "paid", paidAt: now.toISOString(), payment: method, invoiceNo };
+      printInvoice(id, orders[id]);
+      closeModal();
+      load();
+    } catch (e) {
+      btn.disabled = false;
+      alert("تعذر تأكيد الدفع، أعيدوا المحاولة");
+    }
+  }
+
+  function printInvoice(id, o) {
+    const rows = (o.items || []).map(it => `
+      <tr><td style="text-align:right">${esc(it.name)}${it.note ? `<br><small>${esc(it.note)}</small>` : ""}</td>
+      <td>${it.qty}</td><td>${money(it.unit)}</td><td>${money(it.subtotal)}</td></tr>`).join("");
+    $("inv").innerHTML = `
+      <div style="text-align:center">
+        <h2 style="margin:0">Chez Robio</h2>
+        <div>Restaurant &amp; Brunch · Oulfa, Casablanca</div>
+        <div>BD ABDELMOUMEN · 06 50 52 55 96</div>
+      </div>
+      <hr>
+      <div><b>Facture N°</b> ${esc(o.invoiceNo)}</div>
+      <div><b>Date</b> ${new Date(o.paidAt).toLocaleString("fr-MA")}</div>
+      <div><b>Table</b> ${esc(o.table)} · <b>Commande</b> #${code(id)}</div>
+      <div><b>Paiement</b> ${PAY_AR[o.payment] || ""}</div>
+      <table>
+        <tr><th style="text-align:right">Désignation</th><th>Qté</th><th>PU</th><th>Total</th></tr>
+        ${rows}
+      </table>
+      <h3 style="text-align:left">Total : ${money(o.total)}</h3>
+      <p style="text-align:center">Merci pour votre visite · شكراً لزيارتكم</p>`;
+    window.print();
+  }
+
+  function renderDash() {
+    const today = dayKey(new Date());
+    const paid = Object.values(orders).filter(o => o.status === "paid" && o.paidAt && dayKey(o.paidAt) === today);
+    const revenue = paid.reduce((s, o) => s + (+o.total || 0), 0);
+    const pending = unpaid();
+    const pendingSum = pending.reduce((s, [, o]) => s + (+o.total || 0), 0);
+    const avg = paid.length ? revenue / paid.length : 0;
+    $("kpis").innerHTML = `
+      <div class="kpi"><span>مبيعات اليوم</span><b>${money(revenue)}</b></div>
+      <div class="kpi"><span>طلبات مدفوعة</span><b>${paid.length}</b></div>
+      <div class="kpi"><span>متوسط الفاتورة</span><b>${money(avg)}</b></div>
+      <div class="kpi"><span>غير مدفوعة الآن</span><b>${pending.length} · ${money(pendingSum)}</b></div>`;
+
+    const byPay = {};
+    paid.forEach(o => { const k = o.payment || "cash"; byPay[k] = (byPay[k] || 0) + (+o.total || 0); });
+    $("pay").innerHTML = Object.keys(byPay).length
+      ? Object.entries(byPay).map(([k, v]) => `<div class="bar-row"><span>${PAY_AR[k] || k}</span><b>${money(v)}</b></div>`).join("")
+      : `<p class="muted">لا توجد مدفوعات اليوم</p>`;
+
+    const qty = {};
+    paid.forEach(o => (o.items || []).forEach(it => { qty[it.name] = (qty[it.name] || 0) + (+it.qty || 0); }));
+    const top = Object.entries(qty).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    $("top").innerHTML = top.length
+      ? top.map(([n, q]) => `<div class="bar-row"><span>${esc(n)}</span><b>${q}</b></div>`).join("")
+      : `<p class="muted">لا توجد أصناف اليوم</p>`;
+
+    const byW = {};
+    paid.forEach(o => { const w = o.acceptedBy || "غير معروف"; byW[w] = (byW[w] || 0) + (+o.total || 0); });
+    $("byW").innerHTML = Object.keys(byW).length
+      ? Object.entries(byW).sort((a, b) => b[1] - a[1]).map(([w, v]) => `<div class="bar-row"><span>${esc(w)}</span><b>${money(v)}</b></div>`).join("")
+      : `<p class="muted">لا توجد مبيعات اليوم</p>`;
+  }
+</script>
+</body>
+</html>
