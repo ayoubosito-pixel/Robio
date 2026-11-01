@@ -84,6 +84,11 @@
   th { color:var(--muted); font-weight:600; font-size:.85em; }
   td.num { font-variant-numeric:tabular-nums; }
   .hsub { margin-top:14px; font-size:.85em; color:var(--muted); }
+  .b-rdy { flex:1; padding:12px; border:none; border-radius:10px; font-weight:bold; background:#2563eb; color:#fff; cursor:pointer; }
+  .tag.rdy { background:#2563eb; }
+  #calls { display:grid; gap:8px; margin-bottom:14px; }
+  .call { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#3d2a00; border:1px solid #d4a017; border-radius:12px; padding:10px 12px; color:#ffe7a3; }
+  .call button { border:0; border-radius:8px; padding:8px 14px; font-weight:bold; background:#d4a017; color:#1b1410; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -223,6 +228,7 @@
 
       $("#status").textContent = "محدّث " + new Date().toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       renderAll();
+      loadCalls();
     } catch (e) {
       $("#status").textContent = "تعذر الاتصال";
     }
@@ -247,6 +253,9 @@
         }
         await patch(id, { status: "accepted", acceptedBy: waiter, acceptedAt: new Date().toISOString() });
       }
+      if (action === "ready") {
+        await patch(id, { status: "ready", readyAt: new Date().toISOString() });
+      }
       if (action === "serve") {
         await patch(id, { status: "served", servedAt: new Date().toISOString() });
       }
@@ -260,10 +269,46 @@
     }
   }
 
+  /* ================= نداءات الزبائن ================= */
+  let calls = {};
+  let prevCallCount = 0;
+  async function loadCalls() {
+    try {
+      const res = await fetch(`${ORDERS_DB_URL}/calls.json`);
+      calls = (await res.json()) || {};
+      const open = Object.values(calls).filter(c => !c.done);
+      if (open.length > prevCallCount) beep();
+      prevCallCount = open.length;
+      renderCalls();
+    } catch (e) {}
+  }
+  function renderCalls() {
+    let box = document.getElementById("calls");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "calls";
+      document.getElementById("orders").before(box);
+      box.addEventListener("click", async e => {
+        const b = e.target.closest("[data-call]"); if (!b) return;
+        try {
+          await fetch(`${ORDERS_DB_URL}/calls/${b.dataset.call}.json`, {
+            method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ done: true })
+          });
+          loadCalls();
+        } catch (err) { alert("تعذر تحديث النداء"); }
+      });
+    }
+    const open = Object.entries(calls).filter(([, c]) => !c.done)
+      .sort((a, b) => new Date(a[1].time) - new Date(b[1].time));
+    box.innerHTML = open.map(([id, c]) =>
+      `<div class="call"><span>🔔 <b>${esc(c.table)}</b> يطلب النادل · ${fmtTime(c.time)}</span>
+       <button type="button" data-call="${id}">تم</button></div>`).join("");
+  }
+
   /* ================= الواجهة ================= */
   function activeOrders() {
     return Object.entries(orders)
-      .filter(([, o]) => o.status === "new" || o.status === "accepted")
+      .filter(([, o]) => o.status === "new" || o.status === "accepted" || o.status === "ready")
       .sort((a, b) => new Date(a[1].time) - new Date(b[1].time));
   }
 
@@ -273,7 +318,7 @@
       if (!o.tableId) return;
       const m = map[o.tableId] || (map[o.tableId] = { hasNew: false, acceptedBy: null });
       if (o.status === "new") m.hasNew = true;
-      if (o.status === "accepted" && !m.acceptedBy) m.acceptedBy = o.acceptedBy;
+      if ((o.status === "accepted" || o.status === "ready") && !m.acceptedBy) m.acceptedBy = o.acceptedBy;
     });
     return map;
   }
@@ -318,15 +363,18 @@
         </div>`).join("");
       const general = o.generalNote ? `<div class="gnote"><b>ملاحظة الزبون:</b> ${esc(o.generalNote)}</div>` : "";
       const by = !isNew && o.acceptedBy ? `<div class="by">قبله: <b>${esc(o.acceptedBy)}</b> · ${fmtTime(o.acceptedAt)}</div>` : "";
+      const isReady = o.status === "ready";
+      const readyBtn = o.status === "accepted"
+        ? `<button class="b-rdy" data-act="ready" data-id="${id}">🔔 جاهز</button>` : "";
       const actions = isNew
         ? `<button class="b-acc" data-act="accept" data-id="${id}">✅ قبول الطلب</button>
            <button class="b-can" data-act="cancel" data-id="${id}">إلغاء</button>`
-        : `<button class="b-srv" data-act="serve" data-id="${id}">🍽️ تم التقديم</button>
+        : `${readyBtn}<button class="b-srv" data-act="serve" data-id="${id}">🍽️ تم التقديم</button>
            <button class="b-can" data-act="cancel" data-id="${id}">إلغاء</button>`;
       return `<article class="order ${isNew ? "new" : ""}">
         <div class="ohead">
           <span class="tno">${esc(o.table)}</span>
-          <span class="tag ${isNew ? "new" : "acc"}">${isNew ? "جديد" : "مقبول"}</span>
+          <span class="tag ${isNew ? "new" : isReady ? "rdy" : "acc"}">${isNew ? "جديد" : isReady ? "جاهز" : "مقبول"}</span>
         </div>
         <div class="tm">${fmtTime(o.time)}</div>
         <div style="margin-top:8px">${lines}</div>
