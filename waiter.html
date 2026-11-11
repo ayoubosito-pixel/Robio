@@ -1,436 +1,207 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>شاشة النادل - Roblo</title>
+<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Waiter</title>
+<link rel="stylesheet" href="shared.css">
 <style>
-  :root { --bg:#F7F5EE; --surface:#FFFFFF; --ink:#1B2623; --muted:#66706C; --line:#E3DECF; --action:#0E5A57; --gold:#8C6A14; --gold-soft:#C9A24A; --red:#B8362B; --green:#2E7D32; --busy:#E9C46A; }
-  [hidden] { display:none !important; }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'Segoe UI',Tahoma,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; padding:14px 14px 40px; }
-  button, input { font:inherit; color:inherit; }
-  button { cursor:pointer; }
-
-  header.top { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
-  header.top h1 { font-size:1.35em; color:var(--gold); }
-  #who { font-size:.9em; color:var(--muted); margin-top:2px; }
-  #who b { color:var(--ink); }
-  .tools { display:flex; gap:8px; flex-wrap:wrap; }
-  .tools button { border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:8px 14px; font-size:.9em; font-weight:600; }
-  .tools button.on { background:var(--ink); color:var(--bg); }
-  #status { font-size:.8em; color:var(--muted); }
-
-  .warn { background:#FFF4D6; border:1px solid #E8C768; padding:10px 14px; border-radius:12px; font-size:.9em; margin-bottom:12px; }
-
-  /* تسجيل الدخول */
-  .login { max-width:380px; margin:60px auto 0; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:24px; text-align:center; }
-  .login h2 { font-size:1.3em; margin-bottom:6px; color:var(--gold); }
-  .login p { color:var(--muted); font-size:.9em; margin-bottom:16px; }
-  .login input { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--line); font-size:1em; background:var(--bg); }
-  .login button { width:100%; margin-top:12px; padding:13px; border:0; border-radius:12px; background:var(--action); color:#fff; font-weight:700; font-size:1em; }
-
-  /* الزونات والطاولات */
-  .zones { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
-  .zones::-webkit-scrollbar { display:none; }
-  .ztab { flex:none; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:8px 14px; font-weight:600; font-size:.9em; white-space:nowrap; }
-  .ztab.on { background:var(--gold); border-color:var(--gold); color:#fff; }
-  .floor { display:grid; grid-template-columns:repeat(auto-fill,minmax(68px,1fr)); gap:8px; margin-top:12px; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:12px; }
-  .tbl { aspect-ratio:1; border-radius:12px; border:2px solid var(--line); background:#EFEBDD; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:1.1em; font-weight:700; padding:2px; }
-  .tbl small { font-size:.6em; font-weight:600; color:#4a3a10; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .tbl.busy { background:var(--busy); border-color:#D4A93C; }
-  .tbl.new { background:var(--red); border-color:var(--red); color:#fff; animation:blink 1.2s ease-in-out infinite; }
-  .tbl.new small { color:#fff; }
-  .tbl.sel { outline:3px solid var(--action); outline-offset:2px; }
-  @keyframes blink { 50% { opacity:.6; } }
-  .legend { display:flex; gap:12px; flex-wrap:wrap; font-size:.8em; color:var(--muted); margin-top:10px; }
-  .legend span::before { content:"● "; }
-  .lg-new::before { color:var(--red); } .lg-busy::before { color:var(--busy); } .lg-free::before { color:#CFC8B5; }
-
-  .filter { display:flex; justify-content:space-between; align-items:center; margin:18px 2px 8px; font-weight:700; }
-  .filter button { border:0; background:none; color:var(--action); text-decoration:underline; font-size:.9em; }
-
-  /* الطلبات */
-  .orders { display:grid; grid-template-columns:1fr; gap:12px; }
-  @media (min-width:760px) { .orders { grid-template-columns:1fr 1fr 1fr; } }
-  .order { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:14px; }
-  .order.new { border-color:var(--red); box-shadow:0 0 0 2px rgba(184,54,43,.35); }
-  .ohead { display:flex; justify-content:space-between; align-items:center; gap:8px; }
-  .tno { font-weight:800; font-size:1.15em; color:var(--gold); }
-  .tm { font-size:.8em; color:var(--muted); }
-  .tag { font-size:.74em; padding:3px 9px; border-radius:999px; font-weight:700; white-space:nowrap; }
-  .tag.new { background:var(--red); color:#fff; }
-  .tag.acc { background:var(--busy); color:#3d2c00; }
-  .line { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed var(--line); }
-  .line:last-child { border-bottom:0; }
-  .inote { margin-top:4px; background:#FFF4D6; color:#6B4E00; border-right:3px solid var(--gold-soft); padding:5px 8px; border-radius:6px; font-size:.86em; }
-  .gnote { margin-top:10px; background:#E8F1EF; color:#0B3F3D; padding:8px 10px; border-radius:10px; font-size:.9em; }
-  .gnote b { color:var(--action); }
-  .otot { display:flex; justify-content:space-between; margin-top:10px; font-weight:800; }
-  .by { margin-top:8px; font-size:.85em; color:var(--muted); }
-  .by b { color:var(--ink); }
-  .acts { display:flex; gap:8px; margin-top:12px; }
-  .acts button { flex:1; border:0; border-radius:10px; padding:11px; font-weight:700; color:#fff; }
-  .b-acc { background:var(--action); }
-  .b-srv { background:var(--green); }
-  .b-can { background:#6b5b4e; flex:0 0 auto !important; }
-  .empty { text-align:center; color:var(--muted); padding:40px 0; font-size:1.05em; }
-
-  /* السجل */
-  #hist { margin-top:20px; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; }
-  #hist h2 { font-size:1.1em; color:var(--gold); margin-bottom:10px; }
-  table { width:100%; border-collapse:collapse; font-size:.92em; }
-  th, td { text-align:right; padding:8px 6px; border-bottom:1px solid var(--line); }
-  th { color:var(--muted); font-weight:600; font-size:.85em; }
-  td.num { font-variant-numeric:tabular-nums; }
-  .hsub { margin-top:14px; font-size:.85em; color:var(--muted); }
-  .b-rdy { flex:1; padding:12px; border:none; border-radius:10px; font-weight:bold; background:#2563eb; color:#fff; cursor:pointer; }
-  .tag.rdy { background:#2563eb; }
-  #calls { display:grid; gap:8px; margin-bottom:14px; }
-  .call { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#3d2a00; border:1px solid #d4a017; border-radius:12px; padding:10px 12px; color:#ffe7a3; }
-  .call button { border:0; border-radius:8px; padding:8px 14px; font-weight:bold; background:#d4a017; color:#1b1410; cursor:pointer; }
-</style>
-</head>
-<body>
-
-<header class="top">
-  <div>
-    <h1>🛎️ طلبات Roblo</h1>
-    <div id="who"></div>
-  </div>
-  <div class="tools">
-    <span id="status"></span>
-    <button id="histBtn" type="button">📊 سجل اليوم</button>
-    <button id="logoutBtn" type="button">تغيير الاسم</button>
-  </div>
-</header>
-
-<div class="warn" id="dbWarn" hidden>لم يتم ربط قاعدة البيانات بعد. راجعوا ORDERS_DB_URL في هذا الملف.</div>
-
-<!-- تسجيل اسم النادل -->
-<section class="login" id="login" hidden>
-  <h2>مرحباً بكم</h2>
-  <p>اكتبوا اسمكم ليظهر على الطلبات التي تقبلونها</p>
-  <input id="wname" type="text" placeholder="اسم النادل" maxlength="30" autocomplete="off">
-  <button type="button" id="wlogin">دخول</button>
-</section>
-
-<main id="app" hidden>
-  <div class="zones" id="zones"></div>
-  <div class="floor" id="floor"></div>
-  <div class="legend">
-    <span class="lg-new">طلب جديد</span>
-    <span class="lg-busy">مقبول من نادل</span>
-    <span class="lg-free">فارغة</span>
-  </div>
-
-  <div class="filter">
-    <span id="filterLabel">كل الطلبات الجارية</span>
-    <button type="button" id="clearFilter" hidden>عرض الكل</button>
-  </div>
-  <div class="orders" id="orders"></div>
-  <p class="empty" id="empty" hidden>لا توجد طلبات جارية</p>
-
-  <section id="hist" hidden>
-    <h2>📊 سجل اليوم حسب النادل</h2>
-    <table>
-      <thead><tr><th>النادل</th><th>طلبات</th><th>المجموع (DH)</th></tr></thead>
-      <tbody id="histBody"></tbody>
-    </table>
-    <p class="hsub" id="histNote"></p>
-  </section>
-</main>
-
+:root{--bg:#121110;--card:#1b1917;--bd:#2c2926;--tx:#f1ece6;--acc:#ff6a1a}
+body{display:flex;justify-content:center;direction:inherit}
+.wl{width:auto;padding:8px;font-size:13px}
+.c a{color:#7cc4ff;font-size:11px}
+.wrap{width:100%;max-width:520px;padding:14px 14px 60px}
+.login{min-height:90vh;display:flex;flex-direction:column;justify-content:center;gap:12px}
+.login h1{font-size:26px}.login p{color:var(--muted);font-size:13px}
+.inp{width:100%;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;outline:none}
+.inp:focus{border-color:var(--acc)}
+.btn.big{width:100%;padding:15px;font-size:16px;border-radius:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.top b{font-size:17px}.top small{color:var(--muted);display:block;font-size:12px}
+.snd{display:block;width:100%;margin-bottom:10px;background:#3a1f10;color:var(--acc);border:1px solid var(--acc);border-radius:12px;padding:12px;font-weight:700}
+h2{font-size:14px;margin:18px 0 8px;display:flex;justify-content:space-between;align-items:center}
+h2 span{background:var(--acc);color:#111;border-radius:99px;padding:0 9px;font-size:12px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:10px;border-inline-start:4px solid var(--c,var(--bd))}
+.c .h{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px}
+.c .it{font-size:13px;color:#cfc8bf;line-height:1.8;margin-bottom:10px}
+.c .m{font-size:11px;color:var(--muted)}
+.st{font-size:11px;padding:2px 9px;border-radius:99px;background:rgba(255,255,255,.08);color:var(--c)}
+.c.pending{--c:#ff4d4d}.c.new{--c:var(--acc)}.c.preparing{--c:#ffa722}.c.ready{--c:#3ddc6e;animation:p 1.2s infinite}.c.served{--c:#8d8a85}
+@keyframes p{50%{background:#14301d}}
+.pay{background:#1c2733;border:1px solid #2f4a66;border-radius:12px;padding:10px;margin-bottom:10px;font-size:13px}
+.pay b{color:#7cc4ff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.empty{color:var(--muted);text-align:center;font-size:13px;padding:14px 0}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--acc);color:#111;padding:10px 18px;border-radius:99px;font-weight:700;font-size:13px;z-index:9;max-width:90vw;text-align:center}
+.gate{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px}
+.gate h2{font-size:22px;margin:0}.gate p{color:var(--muted);font-size:14px;max-width:320px}
+.gate[hidden]{display:none}
+.tools{display:flex;gap:8px;margin-bottom:10px}.tools button{flex:1}
+.banner{position:fixed;top:0;left:0;right:0;background:var(--acc);color:#111;padding:14px;font-weight:800;text-align:center;z-index:10;font-size:15px}
+</style></head><body>
+<div class="wrap">
+ <div id="login" class="login" hidden>
+  <div><span class="brand"><img data-brand-logo hidden alt=""><b data-brand-name></b></span></div><select class="inp wl" style="align-self:flex-start" onchange="setWL(this.value)" data-langsel></select><h1>🧑‍🍳 <span data-t="w_title"></span></h1><p data-t="w_login_p"></p>
+  <select class="inp" id="wsel"></select>
+  <input class="inp" id="wpw" type="password" autocomplete="current-password" data-tp="w_pw" onkeydown="if(event.key==='Enter')login()">
+  <div id="lhint" style="color:var(--muted);font-size:13px;min-height:18px"></div>
+  <button class="btn big" onclick="login()" data-t="w_enter"></button>
+ </div>
+ <div id="gate" class="gate" hidden><h2 data-t="w_gate_h"></h2><p data-t="w_gate_p"></p><button class="btn big" style="max-width:320px" onclick="activate()" data-t="w_gate_btn"></button></div>
+ <div id="app" hidden>
+  <div style="margin-bottom:8px"><span class="brand"><img data-brand-logo hidden alt=""><b data-brand-name></b></span></div>
+  <div class="top"><div><b id="who"></b><small id="zl"></small></div><div style="display:flex;gap:6px"><select class="inp" id="zsel" style="width:auto;padding:8px" onchange="chZone()"></select><select class="inp wl" onchange="setWL(this.value)" data-langsel></select><button class="btn ghost" onclick="logout()" data-t="w_logout"></button></div></div>
+  <div class="tools"><button class="btn ghost" onclick="testSound()" data-t="w_testsound"></button><span id="vs" class="pill" style="align-self:center"></span></div>
+  <h2><b data-t="w_h_new"></b> <span id="n1">0</span></h2><div id="l1"></div>
+  <h2><b data-t="w_h_mine"></b> <span id="n2">0</span></h2><div id="l2"></div>
+  <h2><b data-t="w_h_chat"></b> <span id="n3">0</span></h2><div id="l3"></div>
+ </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="store.js"></script>
+<script src="i18n.js"></script>
+<script src="i18n-staff.js"></script>
 <script>
-  /* ================= الإعدادات ================= */
-  const ORDERS_DB_URL = "https://chez-robio-restaurant-default-rtdb.europe-west1.firebasedatabase.app"; // نفس الرابط في index.html
-  const DB_READY = !ORDERS_DB_URL.includes("YOUR-PROJECT");
-  const REFRESH_MS = 3000;
-  const WAITER_KEY = "roblo-waiter-name";
+const $ = s => document.querySelector(s);
+let me = '', zone = localStorage.getItem('smt_wzone') || 'all';
+let sess = null; try { sess = JSON.parse(localStorage.getItem('smt_wsess') || 'null'); } catch (e) {}
+if (sess && sess.name) me = sess.name; // tentative until the cloud config confirms it
+try { setLang(localStorage.getItem(WLANG_KEY) || 'ar'); } catch (e) {}
+function applyStatic() {
+  document.querySelectorAll('[data-t]').forEach(e => { e.textContent = t(e.dataset.t); });
+  document.querySelectorAll('[data-tp]').forEach(e => { e.placeholder = t(e.dataset.tp); });
+  document.querySelectorAll('[data-langsel]').forEach(s => { s.innerHTML = Object.keys(LANGS).map(k => `<option value="${k}"${k === LANG ? ' selected' : ''}>${LANGS[k].flag} ${LANGS[k].name}</option>`).join(''); });
+  document.title = t('w_title');
+}
+function setWL(l) { setLang(l); try { localStorage.setItem(WLANG_KEY, l); } catch (e) {} _wsig = ''; applyStatic(); show(); gate(); }
+function wlist() { return ((_cfg && _cfg.waiters) || []).filter(w => !w.off); }
+function checkSession() {
+  if (!cfgReady()) return;
+  const w = sess && ((_cfg.waiters) || []).find(x => x.id === sess.id);
+  if (w && !w.off && w.h === sess.h) me = w.name;
+  else { if (sess) { sess = null; localStorage.removeItem('smt_wsess'); } me = ''; }
+}
+let _wsig = '';
+function refreshLogin() {
+  const ws = wlist(), sig = ws.map(w => w.id + w.name).join('|') + cfgReady();
+  if (sig === _wsig || document.activeElement === $('#wsel')) return;
+  _wsig = sig;
+  $('#wsel').innerHTML = ws.length ? ws.map(w => `<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('') : '<option value="">—</option>';
+  $('#lhint').textContent = ws.length ? '' : (cfgReady() ? t('w_nowaiters') : t('w_loading'));
+}
+const zoneOpts = (sel) => `<option value="all"${sel === 'all' ? ' selected' : ''}>${t('w_allz')}</option>` + ZONES.map(z => `<option value="${z.id}"${sel === z.id ? ' selected' : ''}>${z.name}</option>`).join('');
 
-  // نفس الزونات في index.html
-  const ZONES = [
-    { id: "gauche",   label: "صالة يسار",    count: 13 },
-    { id: "centre",   label: "صالة وسط",     count: 13 },
-    { id: "droite",   label: "صالة يمين",    count: 13 },
-    { id: "terrasse", label: "التراس",        count: 4  },
-    { id: "etage",    label: "الطابق العلوي", count: 18 }
-  ];
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
+function banner(t) { const d = document.createElement('div'); d.className = 'banner'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 5000); }
+function show() {
+  checkSession();
+  $('#login').hidden = !!me; $('#app').hidden = !me;
+  if (me) { $('#who').textContent = t('w_hi', me); $('#zsel').innerHTML = zoneOpts(zone); draw(); }
+  else refreshLogin();
+}
+async function login() {
+  if (!cfgReady()) return toast(t('w_retry'));
+  const w = ((_cfg.waiters) || []).find(x => x.id === $('#wsel').value && !x.off);
+  if (!w) return toast(t('w_t_sel'));
+  const h = await hashPw(w.id, $('#wpw').value);
+  if (h !== w.h) { $('#wpw').value = ''; return toast(t('w_t_badpw')); }
+  sess = { id: w.id, h, name: w.name }; localStorage.setItem('smt_wsess', JSON.stringify(sess));
+  zone = w.zone || 'all'; localStorage.setItem('smt_wzone', zone);
+  $('#wpw').value = ''; show(); activate();
+}
+function logout() { sess = null; localStorage.removeItem('smt_wsess'); me = ''; show(); }
+function chZone() { zone = $('#zsel').value; localStorage.setItem('smt_wzone', zone); draw(); }
+function enableSound() { unlockAudio(); beep(1); }
+async function keepAwake() { try { if (navigator.wakeLock && !document.hidden) window._wl = await navigator.wakeLock.request('screen'); } catch (e) {} }
+function askNotif() { try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {} }
+function sysNotify(t) { try { if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification(t('w_sys'), { body: t, vibrate: [300, 150, 300], requireInteraction: true }); } catch (e) {} }
+function activate() { enableSound(); keepAwake(); askNotif(); say(t('w_v_on'), LANGS[LANG].voice); gate(); }
+function testSound() { alertUser(t('w_v_test'), LANGS[LANG].voice); }
+function gate() { $('#gate').hidden = !me || audioReady(); const v = voiceOkL(LANGS[LANG].voice); $('#vs').textContent = v ? t('w_voice_ok') : t('w_voice_no'); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { keepAwake(); gate(); } });
+setInterval(gate, 1000);
+/* keep ringing every 6s while a new order in my zone is still unaccepted */
+let _n = 0;
+setInterval(() => {
+  if (!me || !audioReady()) return;
+  const s = load();
+  const p = s.orders.filter(o => o.status === 'pending' && inZone(o));
+  const rd = s.orders.filter(o => o.status === 'ready' && o.waiter === me);
+  if (p.length || rd.length) { beep(3); if (++_n % 2 === 0) say(p.length ? t('w_v_pend', p.length) : t('w_v_rd'), LANGS[LANG].voice); try { navigator.vibrate && navigator.vibrate([300, 150, 300]); } catch (e) {} }
+}, 6000);
+const inZone = o => zone === 'all' || zoneObj(o.table).id === zone;
 
-  /* ================= أدوات ================= */
-  const $ = s => document.querySelector(s);
-  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-  const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit" }) : "";
-  const sameDay = iso => iso && new Date(iso).toDateString() === new Date().toDateString();
+function accept(id) { acceptOrder(id, me, ok => { toast(ok ? t('w_t_acc') : t('w_t_late')); draw(); }); }
+function served(id) { advance(id); draw(); }
+function paid(id) { const o = load().orders.find(x => x.id == id); if (o && o.table) markPaidTable(o.table); else markPaid(id); toast(t('w_t_paid')); draw(); }
+function reply(tb, text) { sendChat(tb, 'w', me, text, 'msg'); }
+function replyInput(tb) { const i = document.getElementById('ci_' + (tb || 'tk')); const v = i.value.trim(); if (!v) return; i.value = ''; reply(tb, v); }
 
-  function beep() {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880; g.gain.value = 0.2;
-      o.start(); o.stop(ctx.currentTime + 0.4);
-    } catch (e) {}
-  }
-
-  /* ================= الحالة ================= */
-  let waiter = null;
-  try { waiter = localStorage.getItem(WAITER_KEY); } catch (e) {}
-  let zone = ZONES[0].id;
-  let selectedTable = null;
-  let orders = {};          // id -> order
-  let knownNew = new Set();
-  let firstLoad = true;
-  let histOpen = false;
-
-  if (!DB_READY) $("#dbWarn").hidden = false;
-
-  /* ================= الدخول ================= */
-  function showLogin() {
-    $("#login").hidden = false;
-    $("#app").hidden = true;
-    $("#who").innerHTML = "";
-    $("#wname").focus();
-  }
-  function showApp() {
-    $("#login").hidden = true;
-    $("#app").hidden = false;
-    $("#who").innerHTML = `النادل: <b>${esc(waiter)}</b>`;
-    loadOrders();
-  }
-  $("#wlogin").addEventListener("click", () => {
-    const name = $("#wname").value.trim();
-    if (name.length < 2) { alert("اكتبوا اسماً من حرفين على الأقل"); return; }
-    waiter = name;
-    try { localStorage.setItem(WAITER_KEY, name); } catch (e) {}
-    showApp();
+function card(o, buttons) {
+  return `<div class="c ${o.status}"><div class="h"><span>${whereT(o)} · ${zoneOf(o.table)}</span><span class="st">${statusT(o.status)}</span></div>
+  <div class="it">${o.items.map(i => custItem(i)).join('<br>')}${o.note ? `<br><small style="color:#ffd27a">${esc(t('w_onote', o.note))}</small>` : ''}</div>
+  <div class="m">#${o.id} · ${agoT(o.t)} · ${money(o.total)}</div>${buttons || ''}</div>`;
+}
+function _draw() {
+  if (!me) return;
+  const s = load();
+  $('#zl').textContent = t('w_zone', zone === 'all' ? t('w_all') : (ZONES.find(z => z.id === zone) || { name: t('w_all') }).name) + ' · ' + (cloudOn() ? t('w_cloud') : t('w_localm'));
+  const pend = s.orders.filter(o => o.status === 'pending' && inZone(o)).sort((a, b) => a.t - b.t);
+  $('#n1').textContent = pend.length;
+  $('#l1').innerHTML = pend.map(o => card(o, `<button class="btn big" style="margin-top:10px" onclick="accept(${o.id})">${t('w_accept')}</button>`)).join('') || `<div class="empty">${t('w_none_new')}</div>`;
+  const mine = s.orders.filter(o => o.waiter === me && (o.status !== 'served' || !o.paid)).sort((a, b) => a.t - b.t);
+  $('#n2').textContent = mine.length;
+  $('#l2').innerHTML = mine.map(o => {
+    let b = '';
+    if (o.payReq && !o.paid) b += `<div class="pay">${t('w_wantpay')} <b>${o.payReq === 'cash' ? t('w_cashp') : t('w_cardp')}</b></div><button class="btn big" onclick="paid(${o.id})">${t('w_collected')}</button>`;
+    else if (o.status === 'ready') b += `<button class="btn big" onclick="served(${o.id})">${t('w_served')}</button>`;
+    else if (o.status === 'served' && !o.paid) b += `<div class="m" style="margin-bottom:8px">${t('w_waitpay')}</div><button class="btn ghost big" onclick="paid(${o.id})">${t('w_manual')}</button>`;
+    return card(o, b);
+  }).join('') || `<div class="empty">${t('w_none_mine')}</div>`;
+  const chats = Object.keys(s.chat || {}).filter(k => (s.chat[k] || []).length).map(k => ({ k, tb: k === 'tk' ? null : +k })).filter(c => {
+    const w = tableWaiter(s, c.tb); return w === me || (!w && inZone({ table: c.tb }));
   });
-  $("#wname").addEventListener("keydown", e => { if (e.key === "Enter") $("#wlogin").click(); });
-  $("#logoutBtn").addEventListener("click", () => {
-    if (!confirm("تغيير الاسم؟")) return;
-    waiter = null;
-    try { localStorage.removeItem(WAITER_KEY); } catch (e) {}
-    showLogin();
-  });
+  $('#n3').textContent = chats.length;
+  $('#l3').innerHTML = chats.map(c => {
+    const m = s.chat[c.k].slice(-4);
+    return `<div class="c new"><div class="h"><span>${c.tb ? t('w_table', c.tb) : t('w_take')}</span><span class="st">${zoneOf(c.tb)}</span></div>
+    <div class="it">${m.map(x => { const sh = tr(x.text); const lk = x.from === 'c' && sh === x.text && x.lang && x.lang !== LANG ? ` <a target="_blank" rel="noopener" href="https://translate.google.com/?sl=auto&tl=${LANG}&op=translate&text=${encodeURIComponent(x.text)}">${t('w_trans')}</a>` : ''; return (x.from === 'c' ? '👤 ' + (x.lang && LANGS[x.lang] ? LANGS[x.lang].flag + ' ' : '') : '🧑‍🍳 ') + esc(sh) + lk; }).join('<br>')}</div>
+    <div class="two" style="margin-bottom:8px"><button class="btn ghost" onclick="reply(${c.tb},'في الطريق إليك 🏃')">${t('w_otw')}</button><button class="btn ghost" onclick="reply(${c.tb},'حاضر ✅')">${t('w_ok')}</button><button class="btn ghost" onclick="reply(${c.tb},'لحظة من فضلك ⏳')">${t('w_wait')}</button><button class="btn ghost" onclick="reply(${c.tb},'هل تريد شيئًا آخر؟')">${t('w_more')}</button></div>
+    <div style="display:flex;gap:6px"><input class="inp ci" id="ci_${c.k}" placeholder="${esc(t('w_reply_ph'))}" onkeydown="if(event.key==='Enter')replyInput(${c.tb})"><button class="btn" onclick="replyInput(${c.tb})">${t('w_send')}</button></div></div>`;
+  }).join('') || `<div class="empty">${t('w_none_chat')}</div>`;
+}
 
-  /* ================= قراءة وكتابة الطلبات ================= */
-  async function loadOrders() {
-    if (!DB_READY) { $("#status").textContent = "غير مربوط"; return; }
-    try {
-      const res = await fetch(`${ORDERS_DB_URL}/orders.json`);
-      const data = (await res.json()) || {};
-      orders = data;
-
-      const newIds = Object.entries(data).filter(([, o]) => o.status === "new").map(([id]) => id);
-      if (!firstLoad && newIds.some(id => !knownNew.has(id))) beep();
-      knownNew = new Set(newIds);
-      firstLoad = false;
-
-      $("#status").textContent = "محدّث " + new Date().toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-      renderAll();
-      loadCalls();
-    } catch (e) {
-      $("#status").textContent = "تعذر الاتصال";
-    }
+watchEvents(e => {
+  if (!me) return;
+  const mineZone = zone === 'all' || e.zoneId === zone;
+  if (e.type === 'new_order' && mineZone) {
+    const sp = e.table ? t('w_v_new_t', e.zone, t('w_table', e.table)) : t('w_v_new', e.zone);
+    sysNotify(sp); alertUser(sp, LANGS[LANG].voice); banner('🔔 ' + sp);
   }
-
-  async function patch(id, data) {
-    const res = await fetch(`${ORDERS_DB_URL}/orders/${id}.json`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data)
-    });
-    if (!res.ok) throw new Error("HTTP " + res.status);
+  if (e.type === 'order_ready' && e.waiter === me) {
+    const w = (e.table ? t('w_table', e.table) : t('w_take')) + ', ' + t('w_inv', e.order);
+    sysNotify(t('w_b_ready', w)); alertUser(t('w_v_ready', me, w), LANGS[LANG].voice); banner(t('w_b_ready', w));
   }
-
-  async function act(action, id) {
-    try {
-      if (action === "accept") {
-        // نتأكد أن الطلب لم يقبله نادل آخر قبل الكتابة
-        const r = await fetch(`${ORDERS_DB_URL}/orders/${id}.json`);
-        const cur = await r.json();
-        if (!cur || cur.status !== "new") {
-          alert(cur && cur.acceptedBy ? `هذا الطلب قبله ${cur.acceptedBy}` : "تغيّر حالة الطلب");
-          loadOrders(); return;
-        }
-        await patch(id, { status: "accepted", acceptedBy: waiter, acceptedAt: new Date().toISOString() });
-      }
-      if (action === "ready") {
-        await patch(id, { status: "ready", readyAt: new Date().toISOString() });
-      }
-      if (action === "serve") {
-        await patch(id, { status: "served", servedAt: new Date().toISOString() });
-      }
-      if (action === "cancel") {
-        if (!confirm("إلغاء هذا الطلب؟")) return;
-        await patch(id, { status: "cancelled" });
-      }
-      loadOrders();
-    } catch (e) {
-      alert("تعذر تنفيذ العملية، أعيدوا المحاولة");
-    }
+  if (e.type === 'pay_request' && e.waiter === me) {
+    const tb = t('w_table', e.table), sp = t(e.method === 'cash' ? 'w_v_pay_cash' : 'w_v_pay_card', tb);
+    sysNotify(sp); alertUser(sp, LANGS[LANG].voice); banner(t('w_b_pay', tb, money(e.total || 0)));
   }
-
-  /* ================= نداءات الزبائن ================= */
-  let calls = {};
-  let prevCallCount = 0;
-  async function loadCalls() {
-    try {
-      const res = await fetch(`${ORDERS_DB_URL}/calls.json`);
-      calls = (await res.json()) || {};
-      const open = Object.values(calls).filter(c => !c.done);
-      if (open.length > prevCallCount) beep();
-      prevCallCount = open.length;
-      renderCalls();
-    } catch (e) {}
+  if (e.type === 'chat' && e.from === 'c' && (e.waiter === me || (!e.waiter && mineZone))) {
+    const tb = e.table ? t('w_table', e.table) : t('w_take');
+    const known = e.kind === 'call' || tr(e.text) !== e.text || LANG === 'ar' && !e.lang;
+    const tx = e.kind === 'call' ? t('w_v_call', tb) : t('w_v_msg', tb, tr(e.text));
+    const spoken = known ? tx : t('w_v_msg', tb, '').replace(/[:：]\s*$/, '');
+    sysNotify(tx); alertUser(spoken, LANGS[LANG].voice); banner('💬 ' + tx);
   }
-  function renderCalls() {
-    let box = document.getElementById("calls");
-    if (!box) {
-      box = document.createElement("div");
-      box.id = "calls";
-      document.getElementById("orders").before(box);
-      box.addEventListener("click", async e => {
-        const b = e.target.closest("[data-call]"); if (!b) return;
-        try {
-          await fetch(`${ORDERS_DB_URL}/calls/${b.dataset.call}.json`, {
-            method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ done: true })
-          });
-          loadCalls();
-        } catch (err) { alert("تعذر تحديث النداء"); }
-      });
-    }
-    const open = Object.entries(calls).filter(([, c]) => !c.done)
-      .sort((a, b) => new Date(a[1].time) - new Date(b[1].time));
-    box.innerHTML = open.map(([id, c]) =>
-      `<div class="call"><span>🔔 <b>${esc(c.table)}</b> يطلب النادل · ${fmtTime(c.time)}</span>
-       <button type="button" data-call="${id}">تم</button></div>`).join("");
-  }
-
-  /* ================= الواجهة ================= */
-  function activeOrders() {
-    return Object.entries(orders)
-      .filter(([, o]) => o.status === "new" || o.status === "accepted" || o.status === "ready")
-      .sort((a, b) => new Date(a[1].time) - new Date(b[1].time));
-  }
-
-  function tableStatus() {
-    const map = {};
-    activeOrders().forEach(([, o]) => {
-      if (!o.tableId) return;
-      const m = map[o.tableId] || (map[o.tableId] = { hasNew: false, acceptedBy: null });
-      if (o.status === "new") m.hasNew = true;
-      if ((o.status === "accepted" || o.status === "ready") && !m.acceptedBy) m.acceptedBy = o.acceptedBy;
-    });
-    return map;
-  }
-
-  function renderZones() {
-    $("#zones").innerHTML = ZONES.map(z =>
-      `<button type="button" class="ztab ${z.id === zone ? "on" : ""}" data-z="${z.id}">${esc(z.label)}</button>`
-    ).join("");
-  }
-
-  function renderFloor() {
-    const z = ZONES.find(x => x.id === zone);
-    const st = tableStatus();
-    let h = "";
-    for (let n = 1; n <= z.count; n++) {
-      const tid = `${z.id}-${n}`;
-      const s = st[tid];
-      let cls = "";
-      let small = "";
-      if (s && s.hasNew) cls = "new";
-      else if (s) { cls = "busy"; small = s.acceptedBy ? `<small>${esc(s.acceptedBy)}</small>` : ""; }
-      if (selectedTable === tid) cls += " sel";
-      h += `<button type="button" class="tbl ${cls}" data-t="${tid}"><span>${n}</span>${small}</button>`;
-    }
-    $("#floor").innerHTML = h;
-  }
-
-  function renderOrders() {
-    const list = activeOrders().filter(([, o]) => !selectedTable || o.tableId === selectedTable);
-    $("#empty").hidden = list.length > 0;
-    $("#filterLabel").textContent = selectedTable
-      ? "طاولة: " + (list[0] ? list[0][1].table : selectedTable)
-      : "كل الطلبات الجارية (" + list.length + ")";
-    $("#clearFilter").hidden = !selectedTable;
-
-    $("#orders").innerHTML = list.map(([id, o]) => {
-      const isNew = o.status === "new";
-      const lines = (o.items || []).map(it => `
-        <div>
-          <div class="line"><span>${it.qty} × ${esc(it.name)}</span><span>${it.subtotal} DH</span></div>
-          ${it.note ? `<div class="inote">📝 ${esc(it.note)}</div>` : ""}
-        </div>`).join("");
-      const general = o.generalNote ? `<div class="gnote"><b>ملاحظة الزبون:</b> ${esc(o.generalNote)}</div>` : "";
-      const by = !isNew && o.acceptedBy ? `<div class="by">قبله: <b>${esc(o.acceptedBy)}</b> · ${fmtTime(o.acceptedAt)}</div>` : "";
-      const isReady = o.status === "ready";
-      const readyBtn = o.status === "accepted"
-        ? `<button class="b-rdy" data-act="ready" data-id="${id}">🔔 جاهز</button>` : "";
-      const actions = isNew
-        ? `<button class="b-acc" data-act="accept" data-id="${id}">✅ قبول الطلب</button>
-           <button class="b-can" data-act="cancel" data-id="${id}">إلغاء</button>`
-        : `${readyBtn}<button class="b-srv" data-act="serve" data-id="${id}">🍽️ تم التقديم</button>
-           <button class="b-can" data-act="cancel" data-id="${id}">إلغاء</button>`;
-      return `<article class="order ${isNew ? "new" : ""}">
-        <div class="ohead">
-          <span class="tno">${esc(o.table)}</span>
-          <span class="tag ${isNew ? "new" : isReady ? "rdy" : "acc"}">${isNew ? "جديد" : isReady ? "جاهز" : "مقبول"}</span>
-        </div>
-        <div class="tm">${fmtTime(o.time)}</div>
-        <div style="margin-top:8px">${lines}</div>
-        ${general}
-        <div class="otot"><span>المجموع</span><span>${o.total} DH</span></div>
-        ${by}
-        <div class="acts">${actions}</div>
-      </article>`;
-    }).join("");
-  }
-
-  function renderHistory() {
-    if (!histOpen) return;
-    const served = Object.values(orders).filter(o => o.status === "served" && sameDay(o.servedAt));
-    const byWaiter = {};
-    served.forEach(o => {
-      const w = o.acceptedBy || "غير معروف";
-      if (!byWaiter[w]) byWaiter[w] = { count: 0, total: 0 };
-      byWaiter[w].count++;
-      byWaiter[w].total += +o.total || 0;
-    });
-    const rows = Object.entries(byWaiter).sort((a, b) => b[1].total - a[1].total);
-    $("#histBody").innerHTML = rows.length
-      ? rows.map(([w, v]) => `<tr><td>${esc(w)}</td><td class="num">${v.count}</td><td class="num">${v.total}</td></tr>`).join("")
-      : `<tr><td colspan="3" style="text-align:center;color:var(--muted)">لا توجد طلبات مقدّمة اليوم</td></tr>`;
-    const total = served.reduce((s, o) => s + (+o.total || 0), 0);
-    $("#histNote").textContent = `إجمالي اليوم: ${served.length} طلب · ${total} DH`;
-  }
-
-  function renderAll() {
-    renderZones();
-    renderFloor();
-    renderOrders();
-    renderHistory();
-  }
-
-  // أحداث النقر (تفويض)
-  document.addEventListener("click", e => {
-    const z = e.target.closest("[data-z]");
-    if (z) { zone = z.dataset.z; selectedTable = null; renderAll(); return; }
-    const t = e.target.closest("[data-t]");
-    if (t) { selectedTable = selectedTable === t.dataset.t ? null : t.dataset.t; renderAll(); return; }
-    const a = e.target.closest("[data-act]");
-    if (a) { act(a.dataset.act, a.dataset.id); }
-  });
-  $("#clearFilter").addEventListener("click", () => { selectedTable = null; renderAll(); });
-  $("#histBtn").addEventListener("click", () => {
-    histOpen = !histOpen;
-    $("#hist").hidden = !histOpen;
-    $("#histBtn").classList.toggle("on", histOpen);
-    renderHistory();
-  });
-
-  /* ================= البدء ================= */
-  if (waiter) showApp(); else showLogin();
-  setInterval(() => { if (waiter) loadOrders(); }, REFRESH_MS);
-</script>
-</body>
-</html>
+  draw();
+});
+function draw() {
+  const f = document.activeElement, fid = f && f.id, vals = {};
+  document.querySelectorAll('.ci').forEach(i => vals[i.id] = i.value);
+  _draw();
+  document.querySelectorAll('.ci').forEach(i => { if (vals[i.id]) i.value = vals[i.id]; });
+  if (fid && fid.startsWith('ci_')) { const e = document.getElementById(fid); if (e) e.focus(); }
+}
+onChange(draw, 2000);
+_listeners.push(() => { const was = me; checkSession(); if (was !== me) { show(); if (was) toast(t('w_t_out')); } else if (!me) refreshLogin(); });
+applyStatic(); show(); gate(); keepAwake();
+</script></body></html>
